@@ -1,0 +1,4 @@
+*.tgz
+*.tar.gz
+httpcomponents-client-4.3.3/
+kafka-0.7.2-incubating-src/
