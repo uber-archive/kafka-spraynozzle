@@ -11,6 +11,7 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.consumer.KafkaStream;
 import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
+import kafka.utils.Utils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.entity.ContentType;
@@ -28,7 +29,7 @@ class KafkaSpraynozzle {
         final HttpClient client = HttpClientBuilder.create().build();
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
-        kafkaProps.put("zk.connectiontimeout.ms", "1000");
+        kafkaProps.put("zk.connectiontimeout.ms", "10000");
         kafkaProps.put("groupid", "kafka_spraynozzle");
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
@@ -41,14 +42,16 @@ class KafkaSpraynozzle {
         for(final KafkaStream<Message> stream: streams) {
             executor.submit(new Runnable() {
                 public void run() {
-                    for(MessageAndMetadata msgAndMessageData: stream) {
+                    for(MessageAndMetadata msgAndMetadata: stream) {
                         HttpPost post = new HttpPost(url);
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-                        StringEntity fakeJsonEntity = new StringEntity("{\"hello\": \"world\"}", ContentType.APPLICATION_JSON);
-                        post.setEntity(fakeJsonEntity);
-                        try {
+			try {
+                            StringEntity jsonEntity = new StringEntity(new String(((Message)msgAndMetadata.message()).payload().array(), "UTF-8"), ContentType.APPLICATION_JSON);
+                            post.setEntity(jsonEntity);
                             HttpResponse response = client.execute(post);
                             System.out.println("Response code: " + response.getStatusLine().getStatusCode());
+                        } catch (java.io.UnsupportedEncodingException e) {
+                            e.printStackTrace();
                         } catch (java.io.IOException e) {
                             e.printStackTrace();
                         }
