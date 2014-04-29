@@ -45,7 +45,7 @@ class KafkaSpraynozzle {
             executor.submit(new Runnable() {
                 public void run() {
                     System.out.println("Starting thread");
-		    CloseableHttpClient client = HttpClientBuilder.create().build();
+                    CloseableHttpClient client = HttpClientBuilder.create().build();
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         System.out.println("Processing message");
                         HttpPost post = new HttpPost(url);
@@ -54,21 +54,17 @@ class KafkaSpraynozzle {
                             ByteBuffer message = ((Message)msgAndMetadata.message()).payload();
                             Integer messageLen = ((Message)msgAndMetadata.message()).payloadSize();
                             Integer messageOffset = message.arrayOffset();
-			    System.out.println("message length: " + messageLen);
-			    System.out.println("message offset: " + messageOffset);
-			    byte[] messageBytes = Arrays.copyOfRange(message.array(), messageOffset, messageLen+messageOffset);
                             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
                             jsonEntity.setContentEncoding("UTF-8");
                             post.setEntity(jsonEntity);
-			    System.out.println("Posting message: " + new String(messageBytes, "UTF-8"));
                             CloseableHttpResponse response = client.execute(post);
                             System.out.println("Response code: " + response.getStatusLine().getStatusCode());
-			    response.close();
+                            response.close();
                         } catch (java.io.UnsupportedEncodingException e) {
-			    System.out.println("Encoding issue");
+                            System.out.println("Encoding issue");
                             e.printStackTrace();
                         } catch (java.io.IOException e) {
-			    System.out.println("IO issue");
+                            System.out.println("IO issue");
                             e.printStackTrace();
                         }
                     }
