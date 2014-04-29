@@ -46,9 +46,11 @@ class KafkaSpraynozzle {
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         HttpPost post = new HttpPost(url);
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-			try {
-                            ByteBuffer message = new ByteBuffer(((Message)msgAndMetadata.message()).payloadSize());
-                            ((Message)msgAndMetadata.message()).serializeTo(message);
+                        try {
+                            ByteBuffer payload = ((Message)msgAndMetadata.message()).payload();
+                            Integer messageLen = ((Message)msgAndMetadata.message()).payloadSize();
+                            payload.position(payload.limit() - messageLen);
+                            ByteBuffer message = payload.slice();
                             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), ContentType.APPLICATION_JSON);
                             jsonEntity.setContentEncoding("UTF-8");
                             post.setEntity(jsonEntity);
