@@ -6,6 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.lang.Runnable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
@@ -13,8 +14,8 @@ import kafka.consumer.KafkaStream;
 import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
 import kafka.utils.Utils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.client.methods.HttpPost;
@@ -28,7 +29,6 @@ class KafkaSpraynozzle {
         String zk = args[2];
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url + " (not really)");
 
-        final HttpClient client = HttpClientBuilder.create().build();
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
@@ -45,6 +45,7 @@ class KafkaSpraynozzle {
             executor.submit(new Runnable() {
                 public void run() {
                     System.out.println("Starting thread");
+		    CloseableHttpClient client = HttpClientBuilder.create().build();
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         System.out.println("Processing message");
                         HttpPost post = new HttpPost(url);
@@ -53,14 +54,21 @@ class KafkaSpraynozzle {
                             ByteBuffer message = ((Message)msgAndMetadata.message()).payload();
                             Integer messageLen = ((Message)msgAndMetadata.message()).payloadSize();
                             Integer messageOffset = message.arrayOffset();
+			    System.out.println("message length: " + messageLen);
+			    System.out.println("message offset: " + messageOffset);
+			    byte[] messageBytes = Arrays.copyOfRange(message.array(), messageOffset, messageLen+messageOffset);
                             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
                             jsonEntity.setContentEncoding("UTF-8");
                             post.setEntity(jsonEntity);
-                            HttpResponse response = client.execute(post);
+			    System.out.println("Posting message: " + new String(messageBytes, "UTF-8"));
+                            CloseableHttpResponse response = client.execute(post);
                             System.out.println("Response code: " + response.getStatusLine().getStatusCode());
+			    response.close();
                         } catch (java.io.UnsupportedEncodingException e) {
+			    System.out.println("Encoding issue");
                             e.printStackTrace();
                         } catch (java.io.IOException e) {
+			    System.out.println("IO issue");
                             e.printStackTrace();
                         }
                     }
