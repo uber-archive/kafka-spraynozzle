@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.lang.Runnable;
+import java.nio.ByteBuffer;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
@@ -15,7 +16,7 @@ import kafka.utils.Utils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -46,7 +47,10 @@ class KafkaSpraynozzle {
                         HttpPost post = new HttpPost(url);
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
 			try {
-                            StringEntity jsonEntity = new StringEntity(new String(((Message)msgAndMetadata.message()).payload().array(), "UTF-8"), ContentType.APPLICATION_JSON);
+                            ByteBuffer message = new ByteBuffer(((Message)msgAndMetadata.message()).payloadSize());
+                            ((Message)msgAndMetadata.message()).serializeTo(message);
+                            ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), ContentType.APPLICATION_JSON);
+                            jsonEntity.setContentEncoding("UTF-8");
                             post.setEntity(jsonEntity);
                             HttpResponse response = client.execute(post);
                             System.out.println("Response code: " + response.getStatusLine().getStatusCode());
