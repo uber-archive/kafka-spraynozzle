@@ -22,6 +22,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 class KafkaSpraynozzle {
     public static void main(String[] args) {
+        final Integer threadCount = 4;
         String topic = args[0];
         final String url = args[1];
         String zk = args[2];
@@ -35,15 +36,17 @@ class KafkaSpraynozzle {
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
-        topicParallelism.put(topic, 4);
+        topicParallelism.put(topic, threadCount);
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
         List<KafkaStream<Message>> streams = topicMessageStreams.get(topic);
-        ExecutorService executor = Executors.newFixedThreadPool(4);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
         for(final KafkaStream<Message> stream: streams) {
             executor.submit(new Runnable() {
                 public void run() {
+                    System.out.println("Starting thread");
                     for(MessageAndMetadata msgAndMetadata: stream) {
+                        System.out.println("Processing message");
                         HttpPost post = new HttpPost(url);
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
                         try {
