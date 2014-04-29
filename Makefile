@@ -23,7 +23,7 @@ build-runner: build-kafka KafkaSpraynozzle.class
 build: extract build-kafka build-runner KafkaSpraynozzle.class
 
 rebuild: extract
-	rm *.class
+	rm *.class || exit 0
 	make build
 
 KafkaSpraynozzle.class:
