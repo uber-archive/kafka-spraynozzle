@@ -47,11 +47,10 @@ class KafkaSpraynozzle {
                         HttpPost post = new HttpPost(url);
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
                         try {
-                            ByteBuffer payload = ((Message)msgAndMetadata.message()).payload();
+                            ByteBuffer message = ((Message)msgAndMetadata.message()).payload();
                             Integer messageLen = ((Message)msgAndMetadata.message()).payloadSize();
-                            payload.position(payload.limit() - messageLen);
-                            ByteBuffer message = payload.slice();
-                            ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), ContentType.APPLICATION_JSON);
+                            Integer messageOffset = message.arrayOffset();
+                            ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
                             jsonEntity.setContentEncoding("UTF-8");
                             post.setEntity(jsonEntity);
                             HttpResponse response = client.execute(post);
