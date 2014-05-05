@@ -48,15 +48,17 @@ class KafkaSpraynozzle {
         List<KafkaStream<Message>> streams = topicMessageStreams.get(topic);
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
+        // Http Connection Pooling stuff
+        final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(200);
+        cm.setDefaultMaxPerRoute(20);
+
         // I'll admit this is pretty cool, but the syntax for `Runnable`s is weird
         for(final KafkaStream<Message> stream: streams) {
             executor.submit(new Runnable() {
                 public void run() {
                     // Supposedly the HTTP Client is threadsafe, but lets not chance it, eh?
                     System.out.println("Starting thread");
-                    PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-                    cm.setMaxTotal(200);
-                    cm.setDefaultMaxPerRoute(20);
                     CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         // There's no retry logic or anything like that, so the least I can do
