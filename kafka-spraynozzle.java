@@ -22,6 +22,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 class KafkaSpraynozzle {
     // Indentation good!
@@ -53,7 +54,10 @@ class KafkaSpraynozzle {
                 public void run() {
                     // Supposedly the HTTP Client is threadsafe, but lets not chance it, eh?
                     System.out.println("Starting thread");
-                    CloseableHttpClient client = HttpClientBuilder.create().build();
+                    PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+                    cm.setMaxTotal(200);
+                    cm.setDefaultMaxPerRoute(20);
+                    CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         // There's no retry logic or anything like that, so the least I can do
                         // is log about incoming messages and the status code I get back from the server.
