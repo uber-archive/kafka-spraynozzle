@@ -23,6 +23,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 
 class KafkaSpraynozzle {
     // Indentation good!
@@ -80,7 +81,7 @@ class KafkaSpraynozzle {
                             // confuses me, and led to one of the hardest to track bugs in earlier version of this code.
                             CloseableHttpResponse response = client.execute(post);
                             System.out.println("Response code: " + response.getStatusLine().getStatusCode());
-                            response.close();
+                            EntityUtils.consume(response.getEntity());
                         } catch (java.io.UnsupportedEncodingException e) {
                             // I love that the compiler made me catch these exceptions.
                             // At least for now, though, retries are not in scope, so just be loud when this happens.
