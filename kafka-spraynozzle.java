@@ -30,7 +30,7 @@ class KafkaSpraynozzle {
     public static void main(String[] args) {
         // TODO: Make the threadCount an argument as soon as I write a good topic tester
         // to determine the best threadCount for a given topic.
-        final Integer threadCount = 4;
+        final Integer threadCount = Integer.parseInt(args[3]);
         String topic = args[0];
         final String url = args[1];
         String zk = args[2];
@@ -41,6 +41,8 @@ class KafkaSpraynozzle {
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
         kafkaProps.put("groupid", "kafka_spraynozzle");
+	kafkaProps.put("autooffset.reset", "largest");
+	kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
