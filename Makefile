@@ -17,7 +17,7 @@ kafka-0.7.2-incubating-src/lib_managed:
 	cd kafka-0.7.2-incubating-src && ./sbt update && ./sbt package
 
 build-runner: build-kafka KafkaSpraynozzle.class
-	echo 'exec -a kafka-spraynozzle-$$1 $(JAVA) -cp $(CLASSPATH) KafkaSpraynozzle $$1 $$2 $$3 $$4' > kafka-spraynozzle.sh
+	echo 'exec -a kafka-spraynozzle-$$1 $(JAVA) -cp $(CLASSPATH) KafkaSpraynozzle $$1 $$2 $$3 $$4 $$5' > kafka-spraynozzle.sh
 	chmod +x kafka-spraynozzle.sh
 
 build: extract build-kafka build-runner KafkaSpraynozzle.class
