@@ -33,7 +33,24 @@ Finally, you can do:
     git clone git@github.com:uber/kafka-spraynozzle
     cd kafka-spraynozzle
     make build
-    ./kafka-spraynozzle.sh kafka.topic http://remote.server:port zookeeper.server:port
+    ./kafka-spraynozzle.sh kafka.topic http://remote.server:port zookeeper.server:port num_http_threads num_partitions
+
+## How It Works
+
+Threads! Wonderful, magical threads!
+
+More seriously, the spraynozzle has two types of worker threads: kafka partition consumer threads and http posting threads, with a thread-safe queue created on the main thread gluing them together. The consumer threads read from their designated partition as fast as possible and unwrap the message from kafka's format and rewrap it into a format the http clients can understand, then push it onto the queue. The posting threads read from the top of the queue, construct a post request, stuff in the message, and then read and immediately throw away the response (to keep the http socket alive and not consume all available sockets on the box).
+
+This aggregation and re-dissemination seems silly when you stop to think about it, but what it's actually doing is working around a design flaw in Kafka: the producer has to know the maximum amount of data it can throw into a single partition based on however much any individual consuming worker can handle. This is a design flaw because:
+
+1. You can't predict that ahead of time.
+2. Even if you do figure it out for one consumer, it'll be different for another even if its written in the same language because the amount of work it does on the data differs.
+
+So kafka-spraynozzle actually has *three* knobs to adjust involving data flow:
+
+1. The number of partitions to consume. That's easy, just set it to the partition count of the topic at hand.
+2. The number of http threads to run. This one depends on the response time of your workers and the messages/sec of your topic. 1/response time gives you the messages/sec of each http worker, so messages/sec/response time gives you the number of http threads to run.
+3. The number of workers sitting behind HAProxy or NginX or Node Cluster or whatever. This is also relatively simple: the number of messages/sec of your topic divided by the number of messages/sec each worker can *safely* consume (there should be some buffer for spikes in the stream to not choke your workers).
 
 ## License (MIT)
 
