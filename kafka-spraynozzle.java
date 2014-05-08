@@ -91,12 +91,12 @@ class KafkaSpraynozzle {
                     System.out.println("Starting thread " + threadId);
                     CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
                     while(true) {
-                        if(queue.peek() != null) {
+                        ByteArrayEntity jsonEntity = queue.poll();
+                        if(jsonEntity != null) {
                             try {
                                 System.out.println("Posting message");
                                 HttpPost post = new HttpPost(url);
                                 post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-                                ByteArrayEntity jsonEntity = queue.poll();
                                 post.setEntity(jsonEntity);
                                 CloseableHttpResponse response = client.execute(post);
                                 System.out.println("Response code: " + response.getStatusLine().getStatusCode());
