@@ -53,8 +53,8 @@ class KafkaSpraynozzle {
 
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(200);
-        cm.setDefaultMaxPerRoute(20);
+        cm.setMaxTotal(threadCount);
+        cm.setDefaultMaxPerRoute(threadCount);
 
         final ConcurrentLinkedQueue<ByteArrayEntity> queue = new ConcurrentLinkedQueue<ByteArrayEntity>();
 
@@ -85,16 +85,17 @@ class KafkaSpraynozzle {
                             pushCount = 0;
                             int queueSize = queue.size();
                             if(queueSize > 100) {
-                                // TODO: Better strategy needed, perhaps resize the http threads?
-                                // And a check to make sure the thread resize had any impact
-                                System.out.println("Nozzle is clogged. Sleeping to clear out");
-                                try {
-                                    Thread.sleep(queueSize*5); // TODO: Better estimation of outflow rate needed, too.
-                                } catch (java.lang.InterruptedException e) {
-                                    System.out.println("Sleep issue!?");
-                                    e.printStackTrace();
-                                }
-                            }
+                                while(queueSize > 10) {
+                                    System.out.println("Nozzle is clogged. Sleeping to clear out");
+	                            try {
+        	                        Thread.sleep(5);
+                	            } catch (java.lang.InterruptedException e) {
+                        	        System.out.println("Sleep issue!?");
+                                	e.printStackTrace();
+	                            }
+                                    queueSize = queue.size();
+        	                }
+			    }
                         }
                     }
                 }
