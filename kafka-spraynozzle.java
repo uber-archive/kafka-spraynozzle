@@ -17,6 +17,7 @@ import kafka.consumer.KafkaStream;
 import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
 import kafka.utils.Utils;
+import kafka.utils.ZkUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.entity.ContentType;
@@ -25,6 +26,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.I0Itec.zkclient.ZkClient;
 
 class KafkaSpraynozzle {
     // Indentation good!
@@ -35,6 +37,10 @@ class KafkaSpraynozzle {
         final Integer threadCount = Integer.parseInt(args[3]);
         final Integer partitionCount = Integer.parseInt(args[4]);
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url + " (not really)");
+
+        // Clear out zookeeper records so the spraynozzle drops messages between runs
+        ZkClient zkClient = new ZkClient(zk, 10000);
+        ZkUtils.deletePath(zkClient, "/consumers/kafka_spraynozzle");
 
         // Kafka setup stuff
         Properties kafkaProps = new Properties();
