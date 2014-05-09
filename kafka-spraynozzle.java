@@ -41,8 +41,8 @@ class KafkaSpraynozzle {
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
         kafkaProps.put("groupid", "kafka_spraynozzle");
-	kafkaProps.put("autooffset.reset", "largest");
-	kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
+        kafkaProps.put("autooffset.reset", "largest");
+        kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
@@ -65,6 +65,7 @@ class KafkaSpraynozzle {
                     long threadId = Thread.currentThread().getId();
                     // Supposedly the HTTP Client is threadsafe, but lets not chance it, eh?
                     System.out.println("Starting thread " + threadId);
+                    int pushCount = 0;
                     for(MessageAndMetadata msgAndMetadata: stream) {
                         // There's no retry logic or anything like that, so the least I can do
                         // is log about incoming messages and the status code I get back from the server.
@@ -79,6 +80,22 @@ class KafkaSpraynozzle {
                         jsonEntity.setContentEncoding("UTF-8");
                         queue.add(jsonEntity);
                         System.out.println("Enqueued for posting");
+                        pushCount++;
+                        if(pushCount == 100) {
+                            pushCount = 0;
+                            int queueSize = queue.size();
+                            if(queueSize > 100) {
+                                // TODO: Better strategy needed, perhaps resize the http threads?
+                                // And a check to make sure the thread resize had any impact
+                                System.out.println("Nozzle is clogged. Sleeping to clear out");
+                                try {
+                                    Thread.sleep(queueSize*5); // TODO: Better estimation of outflow rate needed, too.
+                                } catch (java.lang.InterruptedException e) {
+                                    System.out.println("Sleep issue!?");
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
                     }
                 }
             });
