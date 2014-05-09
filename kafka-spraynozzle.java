@@ -40,13 +40,13 @@ class KafkaSpraynozzle {
 
         // Clear out zookeeper records so the spraynozzle drops messages between runs
         ZkClient zkClient = new ZkClient(zk, 10000);
-        ZkUtils.deletePath(zkClient, "/consumers/kafka_spraynozzle");
+        ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
 
         // Kafka setup stuff
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
-        kafkaProps.put("groupid", "kafka_spraynozzle");
+        kafkaProps.put("groupid", "kafka_spraynozzle_" + topic);
         kafkaProps.put("autooffset.reset", "largest");
         kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
