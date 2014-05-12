@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.lang.Runnable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Date;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
@@ -112,6 +113,7 @@ class KafkaSpraynozzle {
                     long threadId = Thread.currentThread().getId();
                     System.out.println("Starting thread " + threadId);
                     CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
+                    long lastReconnect = new Date().getTime();
                     while(true) {
                         ByteArrayEntity jsonEntity = queue.poll();
                         if(jsonEntity != null) {
@@ -122,7 +124,13 @@ class KafkaSpraynozzle {
                                 post.setEntity(jsonEntity);
                                 CloseableHttpResponse response = client.execute(post);
                                 System.out.println("Response code: " + response.getStatusLine().getStatusCode());
-                                EntityUtils.consume(response.getEntity());
+                                long currentTime = new Date().getTime();
+                                if(currentTime - lastReconnect > 10000) {
+                                    lastReconnect = currentTime;
+                                    response.close();
+                                } else {
+                                    EntityUtils.consume(response.getEntity());
+                                }
                             } catch (java.io.IOException e) {
                                 System.out.println("IO issue");
                                 e.printStackTrace();
