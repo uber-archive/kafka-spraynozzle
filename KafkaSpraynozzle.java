@@ -6,25 +6,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import java.lang.Runnable;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.Date;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.consumer.KafkaStream;
 import kafka.message.Message;
-import kafka.message.MessageAndMetadata;
 import kafka.utils.ZkUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.util.EntityUtils;
 import org.I0Itec.zkclient.ZkClient;
 
 class KafkaSpraynozzle {
