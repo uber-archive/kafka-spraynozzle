@@ -69,7 +69,7 @@ class KafkaSpraynozzle {
         }
 
         for(int i = 0; i < threadCount; i++) {
-            executor.submit(new KafkaPoster(queue, cm));
+            executor.submit(new KafkaPoster(queue, cm, url));
         }
     }
 }
