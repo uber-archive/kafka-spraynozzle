@@ -20,14 +20,17 @@ build-runner: build-kafka KafkaSpraynozzle.class
 	echo 'exec -a kafka-spraynozzle-$$1 $(JAVA) -cp $(CLASSPATH) KafkaSpraynozzle $$1 $$2 $$3 $$4 $$5' > kafka-spraynozzle.sh
 	chmod +x kafka-spraynozzle.sh
 
-build: extract build-kafka build-runner KafkaSpraynozzle.class
+build: extract build-kafka build-runner KafkaReader.class KafkaSpraynozzle.class
 
 rebuild: extract
 	rm *.class || exit 0
 	make build
 
-KafkaSpraynozzle.class:
+KafkaSpraynozzle.class: KafkaReader.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) kafka-spraynozzle.java
+
+KafkaReader.class:
+	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaReader.java
 
 clean:
 	rm -rf kafka-0.7.2-incubating-src
