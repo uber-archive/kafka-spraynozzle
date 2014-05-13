@@ -26,7 +26,7 @@ rebuild: extract
 	rm *.class || exit 0
 	make build
 
-KafkaSpraynozzle.class: KafkaReader.class KafkaPoster.java
+KafkaSpraynozzle.class: KafkaReader.class KafkaPoster.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaSpraynozzle.java
 
 KafkaReader.class:
