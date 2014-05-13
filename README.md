@@ -39,7 +39,7 @@ Finally, you can do:
 
 Threads! Wonderful, magical threads!
 
-![THREADS](https://docs.google.com/a/uber.com/drawings/d/1SjEXmgpvUOQGE9HMfXf_i01EykhQXC0Nhg5RaHQeVts/pub?w=1348&amp;h=590)
+![THREADS](https://docs.google.com/a/uber.com/drawings/d/1SjEXmgpvUOQGE9HMfXf_i01EykhQXC0Nhg5RaHQeVts/pub?w=1348&h=590)
 
 More seriously, the spraynozzle has two types of worker threads: kafka partition consumer threads and http posting threads, with a thread-safe queue created on the main thread gluing them together. The consumer threads read from their designated partition as fast as possible and unwrap the message from kafka's format and rewrap it into a format the http clients can understand, then push it onto the queue. The posting threads read from the top of the queue, construct a post request, stuff in the message, and then read and immediately throw away the response (to keep the http socket alive and not consume all available sockets on the box).
 
