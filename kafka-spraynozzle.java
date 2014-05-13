@@ -63,50 +63,13 @@ class KafkaSpraynozzle {
 
         final ConcurrentLinkedQueue<ByteArrayEntity> queue = new ConcurrentLinkedQueue<ByteArrayEntity>();
 
-        // I'll admit this is pretty cool, but the syntax for `Runnable`s is weird
+        // Build the worker threads
         for(final KafkaStream<Message> stream: streams) {
             executor.submit(new KafkaReader(queue, stream));
         }
 
         for(int i = 0; i < threadCount; i++) {
-            executor.submit(new Runnable() {
-                public void run() {
-                    long threadId = Thread.currentThread().getId();
-                    System.out.println("Starting thread " + threadId);
-                    CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
-                    long lastReconnect = new Date().getTime();
-                    while(true) {
-                        ByteArrayEntity jsonEntity = queue.poll();
-                        if(jsonEntity != null) {
-                            try {
-                                System.out.println("Posting message");
-                                HttpPost post = new HttpPost(url);
-                                post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-                                post.setEntity(jsonEntity);
-                                CloseableHttpResponse response = client.execute(post);
-                                System.out.println("Response code: " + response.getStatusLine().getStatusCode());
-                                long currentTime = new Date().getTime();
-                                if(currentTime - lastReconnect > 10000) {
-                                    lastReconnect = currentTime;
-                                    response.close();
-                                } else {
-                                    EntityUtils.consume(response.getEntity());
-                                }
-                            } catch (java.io.IOException e) {
-                                System.out.println("IO issue");
-                                e.printStackTrace();
-                            }
-                        } else {
-                            try {
-                                Thread.sleep(250);
-                            } catch (java.lang.InterruptedException e) {
-                                System.out.println("Sleep issue!?");
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }
-            });
+            executor.submit(new KafkaPoster(queue, cm));
         }
     }
 }
