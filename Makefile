@@ -11,7 +11,7 @@ download: kafka-0.7.2-incubating-src.tgz httpcomponents-client-4.3.3-bin.tar.gz 
 
 extract: kafka-0.7.2-incubating-src httpcomponents-client-4.3.3
 
-build-kafka: kafka-0.7.2-incubating-src kafka-0.7.2-incubating-src/lib_managed
+build-kafka: kafka-0.7.2-incubating-src kafka-0.7.2-incubating-src/lib_managed jewelcli-0.8.7.jar
 
 kafka-0.7.2-incubating-src/lib_managed:
 	cd kafka-0.7.2-incubating-src && ./sbt update && ./sbt package
@@ -43,8 +43,8 @@ clean:
 	rm -rf kafka-0.7.2-incubating-src.tgz
 	rm -rf httpcomponents-client-4.3.3
 	rm -rf httpcomponents-client-4.3.3-bin.tar.gz
-	rm -rf KafkaSpraynozzle$$1.class
-	rm -rf KafkaSpraynozzle.class
+	rm -rf *.class
+	rm -rf *.jar
 
 kafka-0.7.2-incubating-src.tgz:
 	wget http://archive.apache.org/dist/kafka/old_releases/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
