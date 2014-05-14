@@ -7,7 +7,7 @@ KAFKA_OPTS=-Xmx512M -server -Dcom.sun.management.jmxremote -Dcom.sun.management.
 
 .PHONY: download extract build-kafka build rebuild clean
 
-download: kafka-0.7.2-incubating-src.tgz httpcomponents-client-4.3.3-bin.tar.gz jewelcli-0.8.7.jar
+download: kafka-0.7.2-incubating-src.tgz httpcomponents-client-4.3.3-bin.tar.gz jewelcli-0.8.7.jar test/junit-4.11.jar test/hamcrest-core-1.3.jar
 
 extract: kafka-0.7.2-incubating-src httpcomponents-client-4.3.3
 
@@ -22,9 +22,16 @@ build-runner: build-kafka KafkaSpraynozzle.class
 
 build: extract build-kafka build-runner KafkaReader.class KafkaPoster.class KafkaSpraynozzle.class
 
+build-test: build
+	echo TODO
+
 rebuild: extract
 	rm *.class || exit 0
 	make build
+
+rebuild-test: rebuild
+	cd test && rm *.class || exit 0
+	make build-test
 
 KafkaSpraynozzle.class: KafkaReader.class KafkaPoster.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaSpraynozzle.java
@@ -40,8 +47,7 @@ clean:
 	rm -rf kafka-0.7.2-incubating-src.tgz
 	rm -rf httpcomponents-client-4.3.3
 	rm -rf httpcomponents-client-4.3.3-bin.tar.gz
-	rm -rf KafkaSpraynozzle$$1.class
-	rm -rf KafkaSpraynozzle.class
+	rm -rf *.class
 
 kafka-0.7.2-incubating-src.tgz:
 	wget http://archive.apache.org/dist/kafka/old_releases/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
@@ -57,3 +63,9 @@ httpcomponents-client-4.3.3: httpcomponents-client-4.3.3-bin.tar.gz
 
 jewelcli-0.8.7.jar:
 	wget http://repo1.maven.org/maven2/com/lexicalscope/jewelcli/jewelcli/0.8.7/jewelcli-0.8.7.jar
+
+test/junit-4.11.jar:
+	cd test && wget http://search.maven.org/remotecontent?filepath=junit/junit/4.11/junit-4.11.jar -O junit-4.11.jar
+
+test/hamcrest-core-1.3.jar:
+	cd test && wget http://search.maven.org/remotecontent?filepath=org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar -O hamcrest-core-1.3.jar
