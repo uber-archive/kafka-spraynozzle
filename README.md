@@ -33,7 +33,8 @@ Finally, you can do:
     git clone git@github.com:uber/kafka-spraynozzle
     cd kafka-spraynozzle
     make build
-    ./kafka-spraynozzle.sh kafka.topic http://remote.server:port zookeeper.server:port num_http_threads num_partitions
+    ./kafka-spraynozzle.sh --help
+    ./kafka-spraynozzle.sh -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
 
 ## How It Works
 

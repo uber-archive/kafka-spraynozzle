@@ -16,16 +16,25 @@ import kafka.utils.ZkUtils;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.I0Itec.zkclient.ZkClient;
+import com.lexicalscope.jewel.cli.CliFactory;
+import com.lexicalscope.jewel.cli.ArgumentValidationException;
 
 class KafkaSpraynozzle {
     // Indentation good!
     public static void main(String[] args) {
-        String topic = args[0];
-        final String url = args[1];
-        String zk = args[2];
-        final Integer threadCount = Integer.parseInt(args[3]);
-        final Integer partitionCount = Integer.parseInt(args[4]);
-        System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url + " (not really)");
+        KafkaArgs spraynozzleArgs;
+        try {
+            spraynozzleArgs = CliFactory.parseArguments(KafkaArgs.class, args);
+        } catch(ArgumentValidationException e) {
+            System.err.println(e.getMessage());
+            return;
+        }
+        String topic = spraynozzleArgs.getTopic();
+        final String url = spraynozzleArgs.getUrl();
+        String zk = spraynozzleArgs.getZk();
+        final int threadCount = spraynozzleArgs.getThreadCount();
+        final int partitionCount = spraynozzleArgs.getPartitionCount();
+        System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
 
         // Clear out zookeeper records so the spraynozzle drops messages between runs
         ZkClient zkClient = new ZkClient(zk, 10000);
