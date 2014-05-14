@@ -26,14 +26,17 @@ rebuild: extract
 	rm *.class || exit 0
 	make build
 
-KafkaSpraynozzle.class: KafkaReader.class KafkaPoster.class
+KafkaSpraynozzle.class: KafkaReader.class KafkaPoster.class KafkaLog.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaSpraynozzle.java
 
-KafkaReader.class:
+KafkaReader.class: KafkaLog.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaReader.java
 
-KafkaPoster.class:
+KafkaPoster.class: KafkaLog.class
 	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaPoster.java
+
+KafkaLog.class:
+	$(JC) -Xlint:unchecked -cp $(CLASSPATH) KafkaLog.java
 
 clean:
 	rm -rf kafka-0.7.2-incubating-src

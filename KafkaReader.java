@@ -9,22 +9,20 @@ import org.apache.http.entity.ContentType;
 public class KafkaReader implements Runnable {
     ConcurrentLinkedQueue<ByteArrayEntity> queue;
     KafkaStream<Message> stream;
+    ConcurrentLinkedQueue<String> logQueue;
 
-    public KafkaReader(ConcurrentLinkedQueue<ByteArrayEntity> queue, KafkaStream<Message> stream) {
+    public KafkaReader(ConcurrentLinkedQueue<ByteArrayEntity> queue, KafkaStream<Message> stream, ConcurrentLinkedQueue<String> logQueue) {
         this.queue = queue;
         this.stream = stream;
+        this.logQueue = logQueue;
     }
 
     public void run() {
         long threadId = Thread.currentThread().getId();
         // Supposedly the HTTP Client is threadsafe, but lets not chance it, eh?
-        System.out.println("Starting thread " + threadId);
+        System.out.println("Starting reader thread " + threadId);
         int pushCount = 0;
         for(MessageAndMetadata msgAndMetadata: this.stream) {
-            // There's no retry logic or anything like that, so the least I can do
-            // is log about incoming messages and the status code I get back from the server.
-            // Be sure to redirect stdout and stderr to files or your perf will tank.
-            System.out.println("Processing message");
             // Why the heck do I need to cast the message object back into a Message type?
             // `msgAndOffset` doesn't have this wart. :(
             ByteBuffer message = ((Message)msgAndMetadata.message()).payload();
@@ -33,14 +31,14 @@ public class KafkaReader implements Runnable {
             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
             jsonEntity.setContentEncoding("UTF-8");
             queue.add(jsonEntity);
-            System.out.println("Enqueued for posting");
+            this.logQueue.add("enqueued");
             pushCount++;
             if(pushCount == 100) {
                 pushCount = 0;
                 int queueSize = queue.size();
                 if(queueSize > 100) {
+                    this.logQueue.add("clogged");
                     while(queueSize > 10) {
-                        System.out.println("Nozzle is clogged. Sleeping to clear out");
                         try {
                             Thread.sleep(5);
                         } catch (java.lang.InterruptedException e) {

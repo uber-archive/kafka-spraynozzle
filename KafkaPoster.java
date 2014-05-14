@@ -12,28 +12,38 @@ public class KafkaPoster implements Runnable {
     ConcurrentLinkedQueue<ByteArrayEntity> queue;
     PoolingHttpClientConnectionManager cm;
     String url;
+    ConcurrentLinkedQueue<String> logQueue;
 
-    public KafkaPoster(ConcurrentLinkedQueue<ByteArrayEntity> queue, PoolingHttpClientConnectionManager cm, String url) {
+    public KafkaPoster(
+        ConcurrentLinkedQueue<ByteArrayEntity> queue,
+        PoolingHttpClientConnectionManager cm,
+        String url,
+        ConcurrentLinkedQueue<String> logQueue) {
         this.queue = queue;
         this.cm = cm;
         this.url = url;
+        this.logQueue = logQueue;
     }
 
     public void run() {
         long threadId = Thread.currentThread().getId();
-        System.out.println("Starting thread " + threadId);
+        System.out.println("Starting poster thread " + threadId);
         CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(this.cm).build();
         long lastReconnect = new Date().getTime();
         while(true) {
             ByteArrayEntity jsonEntity = this.queue.poll();
             if(jsonEntity != null) {
                 try {
-                    System.out.println("Posting message");
+                    this.logQueue.add("posting");
                     HttpPost post = new HttpPost(this.url);
                     post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
                     post.setEntity(jsonEntity);
                     CloseableHttpResponse response = client.execute(post);
-                    System.out.println("Response code: " + response.getStatusLine().getStatusCode());
+                    if (response.getStatusLine().getStatusCode() == 200) {
+                        this.logQueue.add("postSuccess");
+                    } else {
+                        this.logQueue.add("postFailure");
+                    }
                     long currentTime = new Date().getTime();
                     if(currentTime - lastReconnect > 10000) {
                         lastReconnect = currentTime;

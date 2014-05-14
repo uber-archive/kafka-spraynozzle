@@ -53,22 +53,26 @@ class KafkaSpraynozzle {
         topicParallelism.put(topic, partitionCount);
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
         List<KafkaStream<Message>> streams = topicMessageStreams.get(topic);
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount+partitionCount);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount+partitionCount+1);
 
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
         cm.setMaxTotal(threadCount);
         cm.setDefaultMaxPerRoute(threadCount);
 
+        // Message-passing queues within the spraynozzle
         final ConcurrentLinkedQueue<ByteArrayEntity> queue = new ConcurrentLinkedQueue<ByteArrayEntity>();
+        final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<String>();
 
         // Build the worker threads
+        executor.submit(new KafkaLog(logQueue, topic, url));
+
         for(final KafkaStream<Message> stream: streams) {
-            executor.submit(new KafkaReader(queue, stream));
+            executor.submit(new KafkaReader(queue, stream, logQueue));
         }
 
         for(int i = 0; i < threadCount; i++) {
-            executor.submit(new KafkaPoster(queue, cm, url));
+            executor.submit(new KafkaPoster(queue, cm, url, logQueue));
         }
     }
 }
