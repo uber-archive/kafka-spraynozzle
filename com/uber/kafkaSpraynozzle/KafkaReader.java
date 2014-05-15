@@ -1,3 +1,5 @@
+package com.uber.kafkaSpraynozzle;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import kafka.consumer.KafkaStream;

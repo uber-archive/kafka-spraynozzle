@@ -1,3 +1,5 @@
+package com.uber.kafkaSpraynozzle;
+
 import com.lexicalscope.jewel.cli.CommandLineInterface;
 import com.lexicalscope.jewel.cli.Option;
 import com.lexicalscope.jewel.cli.Unparsed;

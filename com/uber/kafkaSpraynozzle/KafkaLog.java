@@ -1,3 +1,5 @@
+package com.uber.kafkaSpraynozzle;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 // Stringly-typed for now. Anti-pattern but will make it grown up when this app demands more rigor on this front.

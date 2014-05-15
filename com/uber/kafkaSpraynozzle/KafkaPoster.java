@@ -1,3 +1,5 @@
+package com.uber.kafkaSpraynozzle;
+
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.http.entity.ByteArrayEntity;
