@@ -22,11 +22,9 @@ public class KafkaReader implements Runnable {
         // Supposedly the HTTP Client is threadsafe, but lets not chance it, eh?
         System.out.println("Starting reader thread " + threadId);
         int pushCount = 0;
-        for(MessageAndMetadata msgAndMetadata: this.stream) {
-            // Why the heck do I need to cast the message object back into a Message type?
-            // `msgAndOffset` doesn't have this wart. :(
-            ByteBuffer message = ((Message)msgAndMetadata.message()).payload();
-            Integer messageLen = ((Message)msgAndMetadata.message()).payloadSize();
+        for(MessageAndMetadata<Message> msgAndMetadata: this.stream) {
+            ByteBuffer message = msgAndMetadata.message().payload();
+            Integer messageLen = msgAndMetadata.message().payloadSize();
             Integer messageOffset = message.arrayOffset();
             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
             jsonEntity.setContentEncoding("UTF-8");
