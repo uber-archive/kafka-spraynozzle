@@ -43,7 +43,7 @@ public class KafkaLog implements Runnable {
                     postFailure++;
                 }
             }
-            System.out.println("kafka-spraynozzle grabbed " + enqueued + " messages from " + this.topic + ", posted " + posting + " messages to " + this.url + " with " + postSuccess + " succeeding and " + postFailure + " failing");
+            System.out.println("kafka-spraynozzle grabbed " + enqueued + " messages from " + this.topic + ", pausing " + clogged + " times, posted " + posting + " messages to " + this.url + " with " + postSuccess + " succeeding and " + postFailure + " failing");
         }
     }
 }
