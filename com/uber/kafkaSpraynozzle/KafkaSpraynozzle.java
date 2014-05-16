@@ -36,11 +36,14 @@ class KafkaSpraynozzle {
         String zk = spraynozzleArgs.getZk();
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
+        boolean buffering = spraynozzleArgs.getBuffering();
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
 
-        // Clear out zookeeper records so the spraynozzle drops messages between runs
-        ZkClient zkClient = new ZkClient(zk, 10000);
-        ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
+        if(!buffering) {
+            // Clear out zookeeper records so the spraynozzle drops messages between runs
+            ZkClient zkClient = new ZkClient(zk, 10000);
+            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
+        }
 
         // Kafka setup stuff
         Properties kafkaProps = new Properties();
