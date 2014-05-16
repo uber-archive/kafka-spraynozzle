@@ -36,9 +36,9 @@ public class KafkaReader implements Runnable {
             if(pushCount == 100) {
                 pushCount = 0;
                 int queueSize = queue.size();
-                if(queueSize > 100) {
+                if(queueSize > 1000) {
                     this.logQueue.add("clogged");
-                    while(queueSize > 10) {
+                    while(queueSize > 100) {
                         try {
                             Thread.sleep(5);
                         } catch (java.lang.InterruptedException e) {
