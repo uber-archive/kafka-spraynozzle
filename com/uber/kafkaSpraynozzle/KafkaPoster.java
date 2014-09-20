@@ -15,16 +15,19 @@ public class KafkaPoster implements Runnable {
     PoolingHttpClientConnectionManager cm;
     String url;
     ConcurrentLinkedQueue<String> logQueue;
+    KafkaFilter messageFilter;
 
     public KafkaPoster(
         ConcurrentLinkedQueue<ByteArrayEntity> queue,
         PoolingHttpClientConnectionManager cm,
         String url,
-        ConcurrentLinkedQueue<String> logQueue) {
+        ConcurrentLinkedQueue<String> logQueue,
+        KafkaFilter messageFilter) {
         this.queue = queue;
         this.cm = cm;
         this.url = url;
         this.logQueue = logQueue;
+        this.messageFilter = messageFilter;
     }
 
     public void run() {
@@ -35,27 +38,29 @@ public class KafkaPoster implements Runnable {
         while(true) {
             ByteArrayEntity jsonEntity = this.queue.poll();
             if(jsonEntity != null) {
-                try {
-                    this.logQueue.add("posting");
-                    HttpPost post = new HttpPost(this.url);
-                    post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-                    post.setEntity(jsonEntity);
-                    CloseableHttpResponse response = client.execute(post);
-                    if (response.getStatusLine().getStatusCode() == 200) {
-                        this.logQueue.add("postSuccess");
-                    } else {
-                        this.logQueue.add("postFailure");
+                if (messageFilter.filter(jsonEntity)) {
+                    try {
+                        this.logQueue.add("posting");
+                        HttpPost post = new HttpPost(this.url);
+                        post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
+                        post.setEntity(jsonEntity);
+                        CloseableHttpResponse response = client.execute(post);
+                        if (response.getStatusLine().getStatusCode() == 200) {
+                            this.logQueue.add("postSuccess");
+                        } else {
+                            this.logQueue.add("postFailure");
+                        }
+                        long currentTime = new Date().getTime();
+                        if(currentTime - lastReconnect > 10000) {
+                            lastReconnect = currentTime;
+                            response.close();
+                        } else {
+                            EntityUtils.consume(response.getEntity());
+                        }
+                    } catch (java.io.IOException e) {
+                        System.out.println("IO issue");
+                        e.printStackTrace();
                     }
-                    long currentTime = new Date().getTime();
-                    if(currentTime - lastReconnect > 10000) {
-                        lastReconnect = currentTime;
-                        response.close();
-                    } else {
-                        EntityUtils.consume(response.getEntity());
-                    }
-                } catch (java.io.IOException e) {
-                    System.out.println("IO issue");
-                    e.printStackTrace();
                 }
             } else {
                 try {
