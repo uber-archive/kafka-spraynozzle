@@ -12,5 +12,7 @@ public interface KafkaArgs {
     @Option(shortName="n", description="The number of HTTP posting threads to use") int getThreadCount();
     @Option(shortName="b", description="Use Kafka protocol to buffer messages while spraynozzle is down (default: false)") boolean getBuffering();
     @Option(shortName="p", defaultValue="1", description="The number of topic partitions (default: 1)") int getPartitionCount();
+    @Option(shortName="f", defaultToNull=true, description="The name of a class to use for filtering messages (default: none)") String getFilterClass();
+    @Option(shortName="c", defaultToNull=true, description="The classpath to use for finding the above-mentioned filter class (default: none)") String getFilterClasspath();
     @Option(shortName="h", helpRequest=true, description="Display this Help message") boolean getHelp();
 }

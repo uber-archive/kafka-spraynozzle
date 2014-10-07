@@ -2,24 +2,32 @@ package com.uber.kafkaSpraynozzle;
 
 // Forgive me for any non-idiomatic ways this code behaves. I'm not a Java guy but the other clients suck.
 // Also, your build systems are all insane, so I'm not apologizing for the Makefile.
-import java.util.Properties;
-import java.util.Map;
+import com.lexicalscope.jewel.cli.ArgumentValidationException;
+import com.lexicalscope.jewel.cli.CliFactory;
+import java.io.File;
+import java.lang.ClassLoader;
+import java.lang.ClassNotFoundException;
+import java.lang.IllegalAccessException;
+import java.lang.InstantiationException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
-import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
 import kafka.utils.ZkUtils;
+import org.I0Itec.zkclient.ZkClient;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.I0Itec.zkclient.ZkClient;
-import com.lexicalscope.jewel.cli.CliFactory;
-import com.lexicalscope.jewel.cli.ArgumentValidationException;
 
 class KafkaSpraynozzle {
     // Indentation good!
@@ -37,12 +45,37 @@ class KafkaSpraynozzle {
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
         boolean buffering = spraynozzleArgs.getBuffering();
+        final String filterClass = spraynozzleArgs.getFilterClass();
+        final String filterClasspath = spraynozzleArgs.getFilterClasspath();
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
 
         if(!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
             ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
+        }
+
+        KafkaFilter messageFilter = null;
+        if (filterClass != null && filterClasspath != null) {
+            File file = new File(filterClasspath);
+            try {
+                URL[] urls = new URL[]{file.toURL()};
+                ClassLoader cl = new URLClassLoader(urls);
+                Class cls = cl.loadClass(filterClass);
+                messageFilter = (KafkaFilter) cls.newInstance();
+            } catch (MalformedURLException e) {
+                System.out.println("Bad classpath provided");
+            } catch (ClassNotFoundException e) {
+                System.out.println("Filter class not found");
+            } catch (InstantiationException e) {
+                System.out.println("Cannot create instance of filter class");
+            } catch (IllegalAccessException e) {
+                System.out.println("Filter class did I have no idea what but its bad and illegal.");
+            }
+        }
+
+        if (messageFilter == null) {
+            messageFilter = new KafkaNoopFilter();
         }
 
         // Kafka setup stuff
@@ -77,7 +110,7 @@ class KafkaSpraynozzle {
         }
 
         for(int i = 0; i < threadCount; i++) {
-            executor.submit(new KafkaPoster(queue, cm, url, logQueue));
+            executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
         }
     }
 }
