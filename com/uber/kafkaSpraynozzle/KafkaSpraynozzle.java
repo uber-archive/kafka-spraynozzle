@@ -52,7 +52,15 @@ class KafkaSpraynozzle {
         if(!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
-            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
+            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + topic)) {
+                ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
+                try {
+                    Thread.sleep(250);
+                } catch (java.lang.InterruptedException e) {
+                    System.out.println("Sleep Exception!?");
+                    e.printStackTrace();
+                }
+            }
         }
 
         KafkaFilter messageFilter = null;
