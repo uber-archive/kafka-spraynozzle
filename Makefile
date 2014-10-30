@@ -23,7 +23,7 @@ build-runner: build-kafka
 	chmod +x kafka-spraynozzle.sh
 
 build: extract build-kafka build-runner
-	$(JC) -Xlint:unchecked -cp $(CLASSPATH) com/uber/kafkaSpraynozzle/*.java
+	$(JC) -target 1.6 -Xlint:unchecked -cp $(CLASSPATH) com/uber/kafkaSpraynozzle/*.java
 	$(JAR) cfe kafkaSpraynozzle.jar com.uber.kafkaSpraynozzle.KafkaSpraynozzle com/uber/kafkaSpraynozzle/*.class
 
 rebuild: extract
