@@ -41,6 +41,7 @@ class KafkaSpraynozzle {
         }
         String topic = spraynozzleArgs.getTopic();
         final String url = spraynozzleArgs.getUrl();
+        String cleanedUrl = url.replaceAll("[/\\:]", "_");
         String zk = spraynozzleArgs.getZk();
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
@@ -52,8 +53,8 @@ class KafkaSpraynozzle {
         if(!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
-            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic);
-            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + topic)) {
+            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic + cleanedUrl);
+            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + topic + cleanedUrl)) {
                 try {
                     Thread.sleep(250);
                 } catch (java.lang.InterruptedException e) {
@@ -90,7 +91,7 @@ class KafkaSpraynozzle {
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
-        kafkaProps.put("groupid", "kafka_spraynozzle_" + topic);
+        kafkaProps.put("groupid", "kafka_spraynozzle_" + topic + cleanedUrl);
         kafkaProps.put("autooffset.reset", "largest");
         kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
