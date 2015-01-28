@@ -3,5 +3,5 @@
 *.class
 *.sh
 *.jar
-httpcomponents-client-4.3.3/
+httpcomponents-client-4.3.6/
 kafka-0.7.2-incubating-src/
