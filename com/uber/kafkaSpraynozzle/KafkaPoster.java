@@ -45,7 +45,8 @@ public class KafkaPoster implements Runnable {
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
                         post.setEntity(jsonEntity);
                         CloseableHttpResponse response = client.execute(post);
-                        if (response.getStatusLine().getStatusCode() == 200) {
+                        int statusCode = response.getStatusLine().getStatusCode();
+                        if (statusCode >= 200 && statusCode < 300) {
                             this.logQueue.add("postSuccess");
                         } else {
                             this.logQueue.add("postFailure");
