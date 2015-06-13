@@ -1,4 +1,4 @@
-package com.uber.kafkaSpraynozzle.filters;
+package com.uber.kafkaSpraynozzle;
 
 import org.apache.http.entity.ByteArrayEntity;
 

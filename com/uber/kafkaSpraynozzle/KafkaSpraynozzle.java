@@ -20,7 +20,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.uber.kafkaSpraynozzle.filters.KafkaFilter;
 import com.uber.kafkaSpraynozzle.filters.KafkaNoopFilter;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;

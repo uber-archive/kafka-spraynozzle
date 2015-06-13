@@ -2,7 +2,6 @@ package com.uber.kafkaSpraynozzle;
 
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import com.uber.kafkaSpraynozzle.filters.KafkaFilter;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.impl.client.HttpClientBuilder;
