@@ -32,6 +32,7 @@ public class KafkaLog implements Runnable {
             int posting = 0;
             int postSuccess = 0;
             int postFailure = 0;
+            int filteredOut = 0;
             while((log = this.logQueue.poll()) != null) {
                 if("enqueued".equals(log)) {
                     enqueued++;
@@ -43,9 +44,13 @@ public class KafkaLog implements Runnable {
                     postSuccess++;
                 } else if("postFailure".equals(log)) {
                     postFailure++;
+                } else if("filteredOut".equals(log)) {
+                    filteredOut++;
                 }
             }
-            System.out.println("kafka-spraynozzle grabbed " + enqueued + " messages from " + this.topic + ", pausing " + clogged + " times, posted " + posting + " messages to " + this.url + " with " + postSuccess + " succeeding and " + postFailure + " failing");
+            System.out.println("kafka-spraynozzle grabbed " + enqueued + " messages from " + this.topic +
+                    ", filtered out " + filteredOut + " messages, pausing " + clogged + " times" +
+                    ", posted " + posting + " messages to " + this.url + " with " + postSuccess + " succeeding and " + postFailure + " failing");
         }
     }
 }

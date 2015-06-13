@@ -62,6 +62,8 @@ public class KafkaPoster implements Runnable {
                         System.out.println("IO issue");
                         e.printStackTrace();
                     }
+                } else {
+                    this.logQueue.add("filteredOut");
                 }
             } else {
                 try {
