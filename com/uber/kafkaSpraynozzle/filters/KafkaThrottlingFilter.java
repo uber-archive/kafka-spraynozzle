@@ -23,7 +23,7 @@ public class KafkaThrottlingFilter implements KafkaFilter{
 
     @Override
     public boolean filter(ByteArrayEntity jsonEntity) {
-        return random.nextDouble() > allowedPercentage;
+        return random.nextDouble() < allowedPercentage;
     }
 
     @Override
