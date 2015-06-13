@@ -33,15 +33,15 @@ public class KafkaLog implements Runnable {
             int postSuccess = 0;
             int postFailure = 0;
             while((log = this.logQueue.poll()) != null) {
-                if(log == "enqueued") {
+                if("enqueued".equals(log)) {
                     enqueued++;
-                } else if(log == "clogged") {
+                } else if("clogged".equals(log)) {
                     clogged++;
-                } else if(log == "posting") {
+                } else if("posting".equals(log)) {
                     posting++;
-                } else if(log == "postSuccess") {
+                } else if("postSuccess".equals(log)) {
                     postSuccess++;
-                } else if(log == "postFailure") {
+                } else if("postFailure".equals(log)) {
                     postFailure++;
                 }
             }
