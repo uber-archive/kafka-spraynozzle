@@ -1,6 +1,5 @@
 package com.uber.kafkaSpraynozzle.filters;
 
-import com.uber.kafkaSpraynozzle.KafkaFilter;
 import org.apache.http.entity.ByteArrayEntity;
 
 import java.util.Random;
