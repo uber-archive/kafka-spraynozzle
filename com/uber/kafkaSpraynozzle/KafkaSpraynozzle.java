@@ -68,7 +68,6 @@ class KafkaSpraynozzle {
         }
 
         // Kafka setup stuff
-        KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
@@ -100,6 +99,8 @@ class KafkaSpraynozzle {
         }
 
         for(int i = 0; i < threadCount; i++) {
+            // create new filter for every thread so the filters member variables are not shared
+            KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
             executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
         }
     }
@@ -111,7 +112,7 @@ class KafkaSpraynozzle {
             try {
                 URL[] urls = new URL[]{file.toURL()};
                 ClassLoader cl = new URLClassLoader(urls);
-                Class cls = cl.loadClass(filterClass);
+                Class<?> cls = cl.loadClass(filterClass);
                 if (filterClassArgs == null) {
                     messageFilter = (KafkaFilter) cls.newInstance();
                 } else {
@@ -135,6 +136,7 @@ class KafkaSpraynozzle {
         if (messageFilter == null) {
             messageFilter = new KafkaNoopFilter();
         }
+        System.out.println("Using message filter: " + messageFilter);
         return messageFilter;
     }
 }
