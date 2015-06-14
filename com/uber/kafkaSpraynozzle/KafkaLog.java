@@ -6,6 +6,21 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 // *Highly* coupled with the other classes, but to move beyond that will need some crazy mechanism for generating
 // an aggregrated log line about arbitrary events that still looks somewhat like english and why bother with that now?
 public class KafkaLog implements Runnable {
+    private static final String LOG_FORMAT =
+        "{" +
+            "\"message\": \"kafka-spraynozzle stats\", " +
+            "\"data\": {" +
+                "\"topic\": \"%s\", " +
+                "\"enqueued_count\": %d, " +
+                "\"filtered_count\": %d, " +
+                "\"pause_count\": %d, " +
+                "\"post_url\": \"%s\", " +
+                "\"post_count\": %d, " +
+                "\"post_success\": %d, " +
+                "\"post_failure\": %d" +
+            "}" +
+        "}";
+
     ConcurrentLinkedQueue<String> logQueue;
     String topic;
     String url;
@@ -48,9 +63,7 @@ public class KafkaLog implements Runnable {
                     filteredOut++;
                 }
             }
-            System.out.println("kafka-spraynozzle grabbed " + enqueued + " messages from " + this.topic +
-                    ", filtered out " + filteredOut + " messages, pausing " + clogged + " times" +
-                    ", posted " + posting + " messages to " + this.url + " with " + postSuccess + " succeeding and " + postFailure + " failing");
+            System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.url, posting, postSuccess, postFailure));
         }
     }
 }
