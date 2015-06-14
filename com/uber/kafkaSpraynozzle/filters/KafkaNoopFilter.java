@@ -1,5 +1,6 @@
-package com.uber.kafkaSpraynozzle;
+package com.uber.kafkaSpraynozzle.filters;
 
+import com.uber.kafkaSpraynozzle.KafkaFilter;
 import org.apache.http.entity.ByteArrayEntity;
 
 public class KafkaNoopFilter implements KafkaFilter {

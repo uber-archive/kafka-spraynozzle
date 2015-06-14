@@ -9,6 +9,7 @@ import java.lang.ClassLoader;
 import java.lang.ClassNotFoundException;
 import java.lang.IllegalAccessException;
 import java.lang.InstantiationException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -19,6 +20,7 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.uber.kafkaSpraynozzle.filters.KafkaNoopFilter;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -48,6 +50,7 @@ class KafkaSpraynozzle {
         boolean buffering = spraynozzleArgs.getBuffering();
         final String filterClass = spraynozzleArgs.getFilterClass();
         final String filterClasspath = spraynozzleArgs.getFilterClasspath();
+        final String filterClassArgs = spraynozzleArgs.getFilterClassArgs();
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
 
         if(!buffering) {
@@ -62,29 +65,6 @@ class KafkaSpraynozzle {
                     e.printStackTrace();
                 }
             }
-        }
-
-        KafkaFilter messageFilter = null;
-        if (filterClass != null && filterClasspath != null) {
-            File file = new File(filterClasspath);
-            try {
-                URL[] urls = new URL[]{file.toURL()};
-                ClassLoader cl = new URLClassLoader(urls);
-                Class cls = cl.loadClass(filterClass);
-                messageFilter = (KafkaFilter) cls.newInstance();
-            } catch (MalformedURLException e) {
-                System.out.println("Bad classpath provided");
-            } catch (ClassNotFoundException e) {
-                System.out.println("Filter class not found");
-            } catch (InstantiationException e) {
-                System.out.println("Cannot create instance of filter class");
-            } catch (IllegalAccessException e) {
-                System.out.println("Filter class did I have no idea what but its bad and illegal.");
-            }
-        }
-
-        if (messageFilter == null) {
-            messageFilter = new KafkaNoopFilter();
         }
 
         // Kafka setup stuff
@@ -119,7 +99,44 @@ class KafkaSpraynozzle {
         }
 
         for(int i = 0; i < threadCount; i++) {
+            // create new filter for every thread so the filters member variables are not shared
+            KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
             executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
         }
+    }
+
+    private static KafkaFilter getKafkaFilter(String filterClass, String filterClasspath, String filterClassArgs){
+        KafkaFilter messageFilter = null;
+        if (filterClass != null && filterClasspath != null) {
+            File file = new File(filterClasspath);
+            try {
+                URL[] urls = new URL[]{file.toURL()};
+                ClassLoader cl = new URLClassLoader(urls);
+                Class<?> cls = cl.loadClass(filterClass);
+                if (filterClassArgs == null) {
+                    messageFilter = (KafkaFilter) cls.newInstance();
+                } else {
+                    messageFilter = (KafkaFilter) cls.getConstructor(String.class).newInstance(filterClassArgs);
+                }
+            } catch (MalformedURLException e) {
+                System.out.println("Bad classpath provided");
+            } catch (ClassNotFoundException e) {
+                System.out.println("Filter class not found");
+            } catch (InstantiationException e) {
+                System.out.println("Cannot create instance of filter class");
+            } catch (IllegalAccessException e) {
+                System.out.println("Filter class did I have no idea what but its bad and illegal.");
+            } catch (NoSuchMethodException e) {
+                System.out.println("Filter with custom arguments must have a constructor taking 1 String");
+            } catch (InvocationTargetException e) {
+                System.out.println("Error initializing custom filter: " + e.getMessage());
+            }
+        }
+
+        if (messageFilter == null) {
+            messageFilter = new KafkaNoopFilter();
+        }
+        System.out.println("Using message filter: " + messageFilter);
+        return messageFilter;
     }
 }

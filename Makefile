@@ -23,8 +23,8 @@ build-runner: build-kafka
 	chmod +x kafka-spraynozzle.sh
 
 build: extract build-kafka build-runner
-	$(JC) -Xlint:unchecked -cp $(CLASSPATH) com/uber/kafkaSpraynozzle/*.java
-	$(JAR) cfe kafkaSpraynozzle.jar com.uber.kafkaSpraynozzle.KafkaSpraynozzle com/uber/kafkaSpraynozzle/*.class
+	$(JC) -Xlint:unchecked -cp $(CLASSPATH) com/uber/kafkaSpraynozzle/*.java com/uber/kafkaSpraynozzle/*/*.java
+	$(JAR) cfe kafkaSpraynozzle.jar com.uber.kafkaSpraynozzle.KafkaSpraynozzle com/uber/kafkaSpraynozzle/*.class com/uber/kafkaSpraynozzle/*/*.class
 
 rebuild: extract
 	rm *.class || exit 0
@@ -36,6 +36,7 @@ clean:
 	rm -rf httpcomponents-client-4.3.6
 	rm -rf httpcomponents-client-4.3.6-bin.tar.gz
 	rm -rf com/uber/kafkaSpraynozzle/*.class
+	rm -rf com/uber/kafkaSpraynozzle/*/*.class
 	rm -rf *.class
 	rm -rf *.jar
 
