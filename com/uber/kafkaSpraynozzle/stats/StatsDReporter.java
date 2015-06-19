@@ -14,6 +14,8 @@ import java.util.HashMap;
 public class StatsdReporter implements StatsReporter {
     private final StatsDClient statsd;
     private final String statsPrefix;
+    private final String statsdHost;
+    private final Integer statsdPort;
 
     public StatsdReporter(String jsonString) {
         // convert arguments json into dictionary
@@ -25,10 +27,10 @@ public class StatsdReporter implements StatsReporter {
         }
 
         this.statsPrefix = (String)jsonMap.get("statsPrefix");
-        String host = (String)jsonMap.get("host");
-        int port = (Integer)jsonMap.get("port");
-        System.out.println("Connecting to statsd at: " + host + ":" + port);
-        this.statsd = new NonBlockingStatsDClient(this.statsPrefix, host, port);
+        this.statsdHost = (String)jsonMap.get("host");
+        this.statsdPort = (Integer)jsonMap.get("port");
+        System.out.println("Connecting to statsd at: " + this.statsdHost + ":" + this.statsdPort);
+        this.statsd = new NonBlockingStatsDClient(this.statsPrefix, this.statsdHost, this.statsdPort);
     }
 
     @Override
@@ -38,6 +40,10 @@ public class StatsdReporter implements StatsReporter {
 
     @Override
     public String toString() {
-        return "StatsdReporter{statsPrefix=" + this.statsPrefix + "}";
+        return "StatsdReporter{" +
+                "stats prefix=" + this.statsPrefix +
+                ", statsd host=" + this.statsdHost +
+                ", statsd port=" + this.statsdPort +
+                "}";
     }
 }
