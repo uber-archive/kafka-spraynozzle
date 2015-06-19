@@ -20,6 +20,9 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
+import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -50,6 +53,9 @@ class KafkaSpraynozzle {
         final String filterClass = spraynozzleArgs.getFilterClass();
         final String filterClasspath = spraynozzleArgs.getFilterClasspath();
         final String filterClassArgs = spraynozzleArgs.getFilterClassArgs();
+        final String statsClass = spraynozzleArgs.getStatsClass();
+        final String statsClasspath = spraynozzleArgs.getStatsClasspath();
+        final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
         System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
 
         if(!buffering) {
@@ -91,7 +97,8 @@ class KafkaSpraynozzle {
         final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<String>();
 
         // Build the worker threads
-        executor.submit(new KafkaLog(logQueue, topic, url));
+        StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
+        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url));
 
         for(final KafkaStream<Message> stream: streams) {
             executor.submit(new KafkaReader(queue, stream, logQueue));
@@ -105,37 +112,50 @@ class KafkaSpraynozzle {
     }
 
     private static KafkaFilter getKafkaFilter(String filterClass, String filterClasspath, String filterClassArgs){
-        KafkaFilter messageFilter = null;
-        if (filterClass != null && filterClasspath != null) {
-            File file = new File(filterClasspath);
-            try {
-                URL[] urls = new URL[]{file.toURL()};
-                ClassLoader cl = new URLClassLoader(urls);
-                Class<?> cls = cl.loadClass(filterClass);
-                if (filterClassArgs == null) {
-                    messageFilter = (KafkaFilter) cls.newInstance();
-                } else {
-                    messageFilter = (KafkaFilter) cls.getConstructor(String.class).newInstance(filterClassArgs);
-                }
-            } catch (MalformedURLException e) {
-                System.out.println("Bad classpath provided");
-            } catch (ClassNotFoundException e) {
-                System.out.println("Filter class not found");
-            } catch (InstantiationException e) {
-                System.out.println("Cannot create instance of filter class");
-            } catch (IllegalAccessException e) {
-                System.out.println("Filter class did I have no idea what but its bad and illegal.");
-            } catch (NoSuchMethodException e) {
-                System.out.println("Filter with custom arguments must have a constructor taking 1 String");
-            } catch (InvocationTargetException e) {
-                System.out.println("Error initializing custom filter: " + e.getMessage());
-            }
-        }
-
+        KafkaFilter messageFilter = (KafkaFilter)getClass(filterClasspath, filterClass, filterClassArgs);
         if (messageFilter == null) {
             messageFilter = new KafkaNoopFilter();
         }
         System.out.println("Using message filter: " + messageFilter);
         return messageFilter;
+    }
+
+    private static StatsReporter getStatsReporter(String classpath, String className, String classArgs){
+        StatsReporter statsReporter = (StatsReporter)getClass(classpath, className, classArgs);
+        if (statsReporter == null) {
+            statsReporter = new NoopStatsReporter();
+        }
+        System.out.println("Using stats reporter: " + statsReporter);
+        return statsReporter;
+    }
+
+    private static Object getClass(String classpath, String className, String classArgs){
+        Object newClass = null;
+        if (classpath != null && className != null) {
+            File file = new File(className);
+            try {
+                URL[] urls = new URL[]{file.toURL()};
+                ClassLoader cl = new URLClassLoader(urls);
+                Class<?> cls = cl.loadClass(classpath);
+                if (classArgs == null) {
+                    newClass = cls.newInstance();
+                } else {
+                    newClass = cls.getConstructor(String.class).newInstance(classArgs);
+                }
+            } catch (MalformedURLException e) {
+                System.out.println("Bad classpath provided: " + classpath);
+            } catch (ClassNotFoundException e) {
+                System.out.println("Class not found: " + className);
+            } catch (InstantiationException e) {
+                System.out.println("Cannot create instance of class: " + className);
+            } catch (IllegalAccessException e) {
+                System.out.println("Class did I have no idea what but its bad and illegal: " + className);
+            } catch (NoSuchMethodException e) {
+                System.out.println("Class with custom arguments must have a constructor taking 1 String: " + className);
+            } catch (InvocationTargetException e) {
+                System.out.println("Error initializing custom class: " + className + " " + e.getMessage());
+            }
+        }
+        return newClass;
     }
 }

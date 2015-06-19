@@ -16,4 +16,7 @@ public interface KafkaArgs {
     @Option(shortName="c", defaultToNull=true, description="The classpath to use for finding the above-mentioned filter class (default: none)") String getFilterClasspath();
     @Option(shortName="a", defaultToNull=true, description="The arguments for the above-mentioned filter class (default: none)") String getFilterClassArgs();
     @Option(shortName="h", helpRequest=true, description="Display this Help message") boolean getHelp();
+    @Option(shortName="sf", defaultToNull=true, description="The name of a class to use for stats reporting (default: none)") String getStatsClass();
+    @Option(shortName="sp", defaultToNull=true, description="The classpath to use for finding the above-mentioned stats class (default: none)") String getStatsClasspath();
+    @Option(shortName="sa", defaultToNull=true, description="The arguments for the above-mentioned stats class (default: none)") String getStatsClassArgs();
 }
