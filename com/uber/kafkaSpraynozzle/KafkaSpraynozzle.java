@@ -132,11 +132,11 @@ class KafkaSpraynozzle {
     private static Object getClass(String classpath, String className, String classArgs){
         Object newClass = null;
         if (classpath != null && className != null) {
-            File file = new File(className);
+            File file = new File(classpath);
             try {
                 URL[] urls = new URL[]{file.toURL()};
                 ClassLoader cl = new URLClassLoader(urls);
-                Class<?> cls = cl.loadClass(classpath);
+                Class<?> cls = cl.loadClass(className);
                 if (classArgs == null) {
                     newClass = cls.newInstance();
                 } else {
