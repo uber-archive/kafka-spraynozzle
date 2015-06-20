@@ -154,6 +154,8 @@ class KafkaSpraynozzle {
                 System.out.println("Class with custom arguments must have a constructor taking 1 String: " + className);
             } catch (InvocationTargetException e) {
                 System.out.println("Error initializing custom class: " + className + " " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Unknown error initializing custom class: " + className + " " + e.getMessage());
             }
         }
         return newClass;
