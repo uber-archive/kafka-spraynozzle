@@ -47,7 +47,11 @@ public class StatsdReporter implements StatsReporter {
 
     @Override
     public void count(String stat, long delta){
-        statsd.count(stat, delta);
+        try {
+            statsd.count(stat, delta);
+        } catch(Exception e){
+            System.out.println("There was an error reporting stat \'" + stat + "\' to StatsD: " + e.getMessage());
+        }
     }
 
     @Override
