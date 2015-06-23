@@ -1,21 +1,23 @@
 package com.uber.kafkaSpraynozzle.stats;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Statsd StatsReporter implementation
  *
- * To initialize this class you need to provide it the path to a .properties file containing:
- * statsd.host - the statsd host
- * statsd.port - the statsd port
- * statsd.statsPrefix (optional) - a prefix for all stat names
+ * To initialize this class you need to provide it with the following json string:
+   {
+       "host": <hostname>,
+       "port": <port>,
+       "statsPrefix": <prefix for all stats> (optional)
+   }
  */
 public class StatsdReporter implements StatsReporter {
     private final StatsDClient statsd;
@@ -23,24 +25,18 @@ public class StatsdReporter implements StatsReporter {
     private final String statsdHost;
     private final Integer statsdPort;
 
-    public StatsdReporter(String propertyFilePath) throws IOException {
-        Properties statsProperties = new Properties();
-        InputStream fileInputStream;
+    public StatsdReporter(String jsonConfig) throws IOException {
+        // convert jsonConfig into Map
+        Map<String, Object> configMap;
         try {
-            fileInputStream = new FileInputStream(propertyFilePath);
-            statsProperties.load(fileInputStream);
-            fileInputStream.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("Failed to find property file: " + propertyFilePath);
-            throw e;
+            configMap = new ObjectMapper().readValue(jsonConfig, new TypeReference<HashMap<String, Object>>() {});
         } catch (IOException e) {
-            System.out.println("Failed to load properties: " + e.getMessage());
-            throw e;
+            throw new IllegalArgumentException("input is not json: " + jsonConfig);
         }
 
-        this.statsPrefix = statsProperties.getProperty("statsd.statsPrefix", "");
-        this.statsdHost = statsProperties.getProperty("statsd.host");
-        this.statsdPort = Integer.valueOf(statsProperties.getProperty("statsd.port"));
+        this.statsPrefix = (String)configMap.get("statsPrefix");
+        this.statsdHost = (String)configMap.get("host");
+        this.statsdPort = (Integer)configMap.get("port");
         System.out.println("Connecting to statsd at: " + this.statsdHost + ":" + this.statsdPort);
         this.statsd = new NonBlockingStatsDClient(this.statsPrefix, this.statsdHost, this.statsdPort);
     }
