@@ -70,6 +70,7 @@ public class KafkaLog implements Runnable {
             System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.url, posting, postSuccess, postFailure));
             statsReporter.count("enqueued", enqueued);
             statsReporter.count("paused", clogged);
+            statsReporter.count("filtered", filteredOut);
             statsReporter.count("posted", posting);
             statsReporter.count("postSuccess", postSuccess);
             statsReporter.count("postFailure", postFailure);
