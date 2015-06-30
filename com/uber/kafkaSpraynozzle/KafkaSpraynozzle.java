@@ -87,11 +87,14 @@ class KafkaSpraynozzle {
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
-        topicParallelism.put(topic, partitionCount);
+        for (int i = 0; i < topics.length; i++) {
+            topicParallelism.put(topics[i], partitionCount);
+        }
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
         ArrayList<List<KafkaStream<Message>>> streams = new ArrayList<List<KafkaStream<Message>>>();
         for (int i = 0; i < topics.length; i++) {
-            streams.add(topicMessageStreams.get(topics[i]));
+            List<KafkaStream<Message>> stream = topicMessageStreams.get(topics[i]);
+            streams.add(stream);
         }
         ExecutorService executor = Executors.newFixedThreadPool(threadCount+(partitionCount*topics.length)+1);
 
@@ -108,7 +111,7 @@ class KafkaSpraynozzle {
         StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
         executor.submit(new KafkaLog(logQueue, statsReporter, topic, url)); // TODO: Distinguish between the topics in the kafka logger
 
-        for (List<KafkaStream<Message>> streamList : streams) {
+        for (final List<KafkaStream<Message>> streamList : streams) {
             for (final KafkaStream<Message> stream : streamList) {
                 executor.submit(new KafkaReader(queue, stream, logQueue));
             }
