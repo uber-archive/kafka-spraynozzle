@@ -4,6 +4,8 @@ package com.uber.kafkaSpraynozzle;
 // Also, your build systems are all insane, so I'm not apologizing for the Makefile.
 import com.lexicalscope.jewel.cli.ArgumentValidationException;
 import com.lexicalscope.jewel.cli.CliFactory;
+import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
+import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 import java.io.File;
 import java.lang.ClassLoader;
 import java.lang.ClassNotFoundException;
@@ -13,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +23,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
-import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -55,7 +56,7 @@ class KafkaSpraynozzle {
         final String statsClass = spraynozzleArgs.getStatsClass();
         final String statsClasspath = spraynozzleArgs.getStatsClasspath();
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
-        String[] topics = string.split(",");
+        String[] topics = topic.split(",");
         if (topics.length == 1) {
             System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
         } else {
@@ -88,9 +89,9 @@ class KafkaSpraynozzle {
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
         topicParallelism.put(topic, partitionCount);
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
-        List<KafkaStream<Message>>[] streams = new List<KafkaStream<Message>>[topics.length];
+        ArrayList<List<KafkaStream<Message>>> streams = new ArrayList<List<KafkaStream<Message>>>();
         for (int i = 0; i < topics.length; i++) {
-            List<KafkaStream<Message>> streams = topicMessageStreams.get(topics[i]);
+            streams.add(topicMessageStreams.get(topics[i]));
         }
         ExecutorService executor = Executors.newFixedThreadPool(threadCount+(partitionCount*topics.length)+1);
 
@@ -107,8 +108,8 @@ class KafkaSpraynozzle {
         StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
         executor.submit(new KafkaLog(logQueue, statsReporter, topic, url)); // TODO: Distinguish between the topics in the kafka logger
 
-        for (int i = 0; i < topics.length; i++) {
-            for (final KafkaStream<Message> stream: streams[i]) {
+        for (List<KafkaStream<Message>> streamList : streams) {
+            for (final KafkaStream<Message> stream : streamList) {
                 executor.submit(new KafkaReader(queue, stream, logQueue));
             }
         }
