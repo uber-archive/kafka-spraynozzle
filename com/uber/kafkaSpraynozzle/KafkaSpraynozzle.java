@@ -55,9 +55,14 @@ class KafkaSpraynozzle {
         final String statsClass = spraynozzleArgs.getStatsClass();
         final String statsClasspath = spraynozzleArgs.getStatsClasspath();
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
-        System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
+        String[] topics = string.split(",");
+        if (topics.length == 1) {
+            System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
+        } else {
+            System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
+        }
 
-        if(!buffering) {
+        if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
             ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic + cleanedUrl);
@@ -83,8 +88,11 @@ class KafkaSpraynozzle {
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
         topicParallelism.put(topic, partitionCount);
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
-        List<KafkaStream<Message>> streams = topicMessageStreams.get(topic);
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount+partitionCount+1);
+        List<KafkaStream<Message>>[] streams = new List<KafkaStream<Message>>[topics.length];
+        for (int i = 0; i < topics.length; i++) {
+            List<KafkaStream<Message>> streams = topicMessageStreams.get(topics[i]);
+        }
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount+(partitionCount*topics.length)+1);
 
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
@@ -97,13 +105,15 @@ class KafkaSpraynozzle {
 
         // Build the worker threads
         StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
-        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url));
+        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url)); // TODO: Distinguish between the topics in the kafka logger
 
-        for(final KafkaStream<Message> stream: streams) {
-            executor.submit(new KafkaReader(queue, stream, logQueue));
+        for (int i = 0; i < topics.length; i++) {
+            for (final KafkaStream<Message> stream: streams[i]) {
+                executor.submit(new KafkaReader(queue, stream, logQueue));
+            }
         }
 
-        for(int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
             executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
