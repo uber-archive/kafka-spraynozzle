@@ -96,7 +96,7 @@ class KafkaSpraynozzle {
             List<KafkaStream<Message>> stream = topicMessageStreams.get(topics[i]);
             streams.add(stream);
         }
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount+(partitionCount*topics.length)+1);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount + (partitionCount * topics.length) + 1);
 
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
