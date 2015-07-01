@@ -4,6 +4,8 @@ package com.uber.kafkaSpraynozzle;
 // Also, your build systems are all insane, so I'm not apologizing for the Makefile.
 import com.lexicalscope.jewel.cli.ArgumentValidationException;
 import com.lexicalscope.jewel.cli.CliFactory;
+import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
+import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 import java.io.File;
 import java.lang.ClassLoader;
 import java.lang.ClassNotFoundException;
@@ -13,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +23,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
-import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -55,9 +56,14 @@ class KafkaSpraynozzle {
         final String statsClass = spraynozzleArgs.getStatsClass();
         final String statsClasspath = spraynozzleArgs.getStatsClasspath();
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
-        System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
+        String[] topics = topic.split(",");
+        if (topics.length == 1) {
+            System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
+        } else {
+            System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
+        }
 
-        if(!buffering) {
+        if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
             ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topic + cleanedUrl);
@@ -81,10 +87,16 @@ class KafkaSpraynozzle {
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
         ConsumerConnector consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
         HashMap<String, Integer> topicParallelism = new HashMap<String, Integer>();
-        topicParallelism.put(topic, partitionCount);
+        for (int i = 0; i < topics.length; i++) {
+            topicParallelism.put(topics[i], partitionCount);
+        }
         Map<String, List<KafkaStream<Message>>> topicMessageStreams = consumerConnector.createMessageStreams(topicParallelism);
-        List<KafkaStream<Message>> streams = topicMessageStreams.get(topic);
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount+partitionCount+1);
+        ArrayList<List<KafkaStream<Message>>> streams = new ArrayList<List<KafkaStream<Message>>>();
+        for (int i = 0; i < topics.length; i++) {
+            List<KafkaStream<Message>> stream = topicMessageStreams.get(topics[i]);
+            streams.add(stream);
+        }
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount + (partitionCount * topics.length) + 1);
 
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
@@ -97,13 +109,15 @@ class KafkaSpraynozzle {
 
         // Build the worker threads
         StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
-        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url));
+        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url)); // TODO: Distinguish between the topics in the kafka logger
 
-        for(final KafkaStream<Message> stream: streams) {
-            executor.submit(new KafkaReader(queue, stream, logQueue));
+        for (final List<KafkaStream<Message>> streamList : streams) {
+            for (final KafkaStream<Message> stream : streamList) {
+                executor.submit(new KafkaReader(queue, stream, logQueue));
+            }
         }
 
-        for(int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
             executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
