@@ -62,13 +62,12 @@ class KafkaSpraynozzle {
         } else {
             System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
         }
-        String cleanedTopic = topic.replaceAll("[/\\:,]", "_");
 
         if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
             ZkClient zkClient = new ZkClient(zk, 10000);
-            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + cleanedTopic + cleanedUrl);
-            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + cleanedTopic + cleanedUrl)) {
+            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl);
+            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl)) {
                 try {
                     Thread.sleep(250);
                 } catch (java.lang.InterruptedException e) {
@@ -82,7 +81,7 @@ class KafkaSpraynozzle {
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
-        kafkaProps.put("groupid", "kafka_spraynozzle_" + cleanedTopic + cleanedUrl);
+        kafkaProps.put("groupid", "kafka_spraynozzle_" + topics[0] + cleanedUrl);
         kafkaProps.put("autooffset.reset", "largest");
         kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
