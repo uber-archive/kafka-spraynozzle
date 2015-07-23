@@ -1,7 +1,83 @@
-*.tgz
-*.tar.gz
-*.class
-*.sh
+# Eclipse #
+###########
+*target*
 *.jar
-httpcomponents-client-4.3.6/
-kafka-0.7.2-incubating-src/
+*.war
+*.ear
+*.class
+
+# eclipse specific git ignore
+*.pydevproject
+.project
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.a
+*.o
+*.so
+*.node
+bin/*
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+dump.rdb
+*.tap
+
+# OS generated files #
+######################
+.DS_Store?
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Text Editor Byproducts #
+##########################
+*.swp
+*.swo
+.idea/
+*~
+
+# IntelliJ Project File #
+#########################
+*.iml
+
+# Node.js stuff #
+#################
+node_modules/
