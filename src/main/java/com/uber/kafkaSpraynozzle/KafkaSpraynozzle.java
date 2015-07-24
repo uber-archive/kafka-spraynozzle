@@ -22,6 +22,12 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.net.UnknownHostException;
+import java.io.File;
+import java.util.Scanner;
+import java.io.FileNotFoundException;
+import java.net.InetAddress;
+import java.io.IOException;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -33,8 +39,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 class KafkaSpraynozzle {
-    // Indentation good!
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         KafkaArgs spraynozzleArgs;
         try {
             spraynozzleArgs = CliFactory.parseArguments(KafkaArgs.class, args);
@@ -42,13 +47,39 @@ class KafkaSpraynozzle {
             System.err.println(e.getMessage());
             return;
         }
+
+        String zk = spraynozzleArgs.getZk();
+        String leaderLatchZkPath = spraynozzleArgs.getLeaderLatchZkPath();
+        String counterZkPath = spraynozzleArgs.getDistributedAtomicCounterZkPath();
+        boolean buffering = spraynozzleArgs.getBuffering();
+        String hostName = getHostNameFromInetAddress();
+        if (isStringEmpty(hostName)) {
+            hostName = getHostNameFromFile();
+        }
+
+        if (!isStringEmpty(leaderLatchZkPath) && !isStringEmpty(counterZkPath)) {
+            System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
+            //use same zk as kafka
+            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, leaderLatchZkPath, counterZkPath, "spraynozzle-" + hostName);
+            curatorClient.start();
+            curatorClient.blockUntilisLeader();
+            System.out.println("This spraynozzle (spraynozzle-" +  hostName + ") is now the leader. Follow the leader!");
+            if (curatorClient.isFirstLeader()) {
+                //set buffering flag OFF
+                System.out.println("Spraynozzle is first elected leader for this deployment.");
+                buffering = false;
+            } else {
+                System.out.println("Spraynozzle is elected leader. Not the first leader");
+                //set buffering flag ON
+                buffering = true;
+            }
+        }
+
         String topic = spraynozzleArgs.getTopic();
         final String url = spraynozzleArgs.getUrl();
         String cleanedUrl = url.replaceAll("[/\\:]", "_");
-        String zk = spraynozzleArgs.getZk();
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
-        boolean buffering = spraynozzleArgs.getBuffering();
         final String filterClass = spraynozzleArgs.getFilterClass();
         final String filterClasspath = spraynozzleArgs.getFilterClasspath();
         final String filterClassArgs = spraynozzleArgs.getFilterClassArgs();
@@ -139,6 +170,36 @@ class KafkaSpraynozzle {
         }
         System.out.println("Using stats reporter: " + statsReporter);
         return statsReporter;
+    }
+
+    private static Boolean isStringEmpty(String string) {
+        if (string == null || string.isEmpty()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private static String getHostNameFromInetAddress() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return null;
+        }
+    }
+
+    private static String getHostNameFromFile() {
+        try {
+            File file = new File("/etc/hostname");
+            Scanner input = new Scanner(file);
+            if (input.hasNext()) {
+                return input.nextLine();
+            } else {
+                return null;
+            }
+        } catch (FileNotFoundException e) {
+            return null;
+        }
     }
 
     private static Object getClass(String classpath, String className, String classArgs){
