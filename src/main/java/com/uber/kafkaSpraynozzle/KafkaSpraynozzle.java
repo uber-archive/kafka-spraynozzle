@@ -1,7 +1,6 @@
 package com.uber.kafkaSpraynozzle;
 
 // Forgive me for any non-idiomatic ways this code behaves. I'm not a Java guy but the other clients suck.
-// Also, your build systems are all insane, so I'm not apologizing for the Makefile.
 import com.lexicalscope.jewel.cli.ArgumentValidationException;
 import com.lexicalscope.jewel.cli.CliFactory;
 import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
