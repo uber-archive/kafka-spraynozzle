@@ -49,18 +49,19 @@ class KafkaSpraynozzle {
         }
 
         String zk = spraynozzleArgs.getZk();
-        String leaderLatchZkPath = spraynozzleArgs.getLeaderLatchZkPath();
-        String counterZkPath = spraynozzleArgs.getDistributedAtomicCounterZkPath();
+        Boolean spraynozzleHA = spraynozzleArgs.getIsHighlyAvailable();
         boolean buffering = spraynozzleArgs.getBuffering();
         String hostName = getHostNameFromInetAddress();
         if (isStringEmpty(hostName)) {
             hostName = getHostNameFromFile();
         }
 
-        if (!isStringEmpty(leaderLatchZkPath) && !isStringEmpty(counterZkPath)) {
+        if (spraynozzleHA) {
             System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
             //use same zk as kafka
-            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, leaderLatchZkPath, counterZkPath, "spraynozzle-" + hostName);
+            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch";
+            String zkLeaderElectionFolderPath = "/consumers/kafka_spraynozzle_leader_elections";
+            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, zkLeaderLatchFolderPath, zkLeaderElectionFolderPath, "spraynozzle-" + hostName);
             curatorClient.start();
             curatorClient.blockUntilisLeader();
             System.out.println("This spraynozzle (spraynozzle-" +  hostName + ") is now the leader. Follow the leader!");

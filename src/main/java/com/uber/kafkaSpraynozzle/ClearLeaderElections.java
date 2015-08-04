@@ -8,6 +8,7 @@ import org.apache.curator.framework.recipes.atomic.AtomicValue;
 
 public class ClearLeaderElections {
     // ClearLeaderElections [zkConnectionString] [counterPath in zk]
+    // /consumers/kafka_spraynozzle_leader_elections
     public static void main(String[] args) throws Exception {
         CuratorFramework zkClient = CuratorFrameworkFactory.newClient(args[0], new ExponentialBackoffRetry(1000, 3));
         String counterPath = args[1];

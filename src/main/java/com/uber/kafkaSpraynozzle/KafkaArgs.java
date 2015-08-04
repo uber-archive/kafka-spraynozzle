@@ -13,8 +13,7 @@ public interface KafkaArgs {
     @Option(shortName="b", description="Use Kafka protocol to buffer messages while spraynozzle is down (default: false)") boolean getBuffering();
     @Option(shortName="p", defaultValue="1", description="The number of topic partitions (default: 1)") int getPartitionCount();
     @Option(shortName="f", defaultToNull=true, description="The name of a class to use for filtering messages (default: none)") String getFilterClass();
-    @Option(shortName="l", defaultToNull=true, description="The name of the leaderLatch zk path (default: none)") String getLeaderLatchZkPath();
-    @Option(shortName="e", defaultToNull=true, description="The name of the distributed atomic counter zk path (default: none)") String getDistributedAtomicCounterZkPath();
+    @Option(shortName="l", defaultToNull=false, description="Use zk to make the spraynozzle highly available (default: false)") Boolean getIsHighlyAvailable();
     @Option(shortName="c", defaultToNull=true, description="The classpath to use for finding the above-mentioned filter class (default: none)") String getFilterClasspath();
     @Option(shortName="a", defaultToNull=true, description="The arguments for the above-mentioned filter class (default: none)") String getFilterClassArgs();
     @Option(shortName="s", defaultToNull=true, description="The name of a class to use for stats reporting (default: none)") String getStatsClass();
