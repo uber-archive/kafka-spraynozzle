@@ -22,7 +22,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.io.IOException;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -80,10 +79,10 @@ class KafkaSpraynozzle {
             System.out.println("This spraynozzle (" +  spraynozzleName + ") is now the leader. Follow the leader!");
             if (curatorClient.isFirstLeader()) {
                 //set buffering flag OFF
-                System.out.println("Spraynozzle is first elected leader for this deployment.");
+                System.out.println("Spraynozzle is first elected leader for this deployment. Clear out zookeeper records so the spraynozzle drops messages between runs");
                 buffering = false;
             } else {
-                System.out.println("Spraynozzle is elected leader. Not the first leader");
+                System.out.println("Spraynozzle is elected leader, but not the first. Keep zookeeper records so the spraynozzle resumes from last offset between runs.");
                 //set buffering flag ON
                 buffering = true;
             }
@@ -166,14 +165,6 @@ class KafkaSpraynozzle {
         }
         System.out.println("Using stats reporter: " + statsReporter);
         return statsReporter;
-    }
-
-    private static Boolean isStringEmpty(String string) {
-        if (string == null || string.isEmpty()) {
-            return true;
-        } else {
-            return false;
-        }
     }
 
     private static Object getClass(String classpath, String className, String classArgs){
