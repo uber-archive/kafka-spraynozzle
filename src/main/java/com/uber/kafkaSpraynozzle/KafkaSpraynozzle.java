@@ -31,10 +31,10 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import java.util.UUID;
 
 class KafkaSpraynozzle {
-    // Indentation good!
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         KafkaArgs spraynozzleArgs;
         try {
             spraynozzleArgs = CliFactory.parseArguments(KafkaArgs.class, args);
@@ -42,13 +42,16 @@ class KafkaSpraynozzle {
             System.err.println(e.getMessage());
             return;
         }
+
+        String zk = spraynozzleArgs.getZk();
+        Boolean spraynozzleHA = spraynozzleArgs.getIsHighlyAvailable();
+        boolean buffering = spraynozzleArgs.getBuffering();
+
         String topic = spraynozzleArgs.getTopic();
         final String url = spraynozzleArgs.getUrl();
         String cleanedUrl = url.replaceAll("[/\\:]", "_");
-        String zk = spraynozzleArgs.getZk();
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
-        boolean buffering = spraynozzleArgs.getBuffering();
         final String filterClass = spraynozzleArgs.getFilterClass();
         final String filterClasspath = spraynozzleArgs.getFilterClasspath();
         final String filterClassArgs = spraynozzleArgs.getFilterClassArgs();
@@ -60,6 +63,29 @@ class KafkaSpraynozzle {
             System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
         } else {
             System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
+        }
+
+        if (spraynozzleHA) {
+            System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
+            //use same zk as kafka
+            //curator and kafka zk path NEED to be different since kafka path is cleared when there is no buffering
+            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
+            String zkLeaderElectionFolderPath = "/consumers/kafka_spraynozzle_leader_elections_" + topics[0] + cleanedUrl;
+            //identify each spraynozzle instace with a UUID to allow spraynozzles in the same ring (master-slave config) to coexist in the same host
+            String spraynozzleName = "spraynozzle-" + UUID.randomUUID();
+            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, zkLeaderLatchFolderPath, zkLeaderElectionFolderPath, spraynozzleName);
+            curatorClient.start();
+            curatorClient.blockUntilisLeader();
+            System.out.println("This spraynozzle (" +  spraynozzleName + ") is now the leader. Follow the leader!");
+            if (curatorClient.isFirstLeader()) {
+                //set buffering flag OFF
+                System.out.println("Spraynozzle is first elected leader for this deployment. Clear out zookeeper records so the spraynozzle drops messages between runs");
+                buffering = false;
+            } else {
+                System.out.println("Spraynozzle is elected leader, but not the first. Keep zookeeper records so the spraynozzle resumes from last offset between runs.");
+                //set buffering flag ON
+                buffering = true;
+            }
         }
 
         if (!buffering) {

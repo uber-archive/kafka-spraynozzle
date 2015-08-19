@@ -27,11 +27,13 @@ Most non-Java Kafka clients suck, especially the Kafka 0.7 clients, so they can'
 Also make sure you have `maven` installed. It's used to build the project. Optionally have any version of Node.js installed if you want to run the trivial test server that was used in debugging the spraynozzle.
 
 Finally, you can do:
-
     git clone git@github.com:uber/kafka-spraynozzle
     cd kafka-spraynozzle
     mvn clean package
-    java -classpath ./target/kafkaSpraynozzle-0.1.0-SNAPSHOT.jar com.uber.kafkaSpraynozzle.KafkaSpraynozzle -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
+    ./kafka-spraynozzle.sh -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
+
+At the start of each deployment, remember to clear zookeeper paths related to leader election:
+    java -classpath ./target/kafkaSpraynozzle-0.1.0.jar com.uber.kafkaSpraynozzle.ClearZkLeaderElectionPaths zookeeper.server:port kafka.topic http://remote.server:port/url
 
 ## How It Works
 
