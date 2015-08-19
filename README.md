@@ -32,7 +32,7 @@ Finally, you can do:
     mvn clean package
     ./kafka-spraynozzle.sh -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
 
-Between runs or deployments, remember to clear zookeeper paths related to leader election paths:
+At the start of each deployment, remember to clear zookeeper paths related to leader election:
     java -classpath ./target/kafkaSpraynozzle-0.1.0.jar com.uber.kafkaSpraynozzle.ClearZkLeaderElectionPaths zookeeper.server:port kafka.topic http://remote.server:port/url
 
 ## How It Works
