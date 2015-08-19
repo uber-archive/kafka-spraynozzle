@@ -34,8 +34,7 @@ public class SpraynozzleLeaderLatch {
     public Boolean isFirstLeader() throws Exception {
         AtomicValue<Integer> value = leaderElections.increment();
         while (value.succeeded()) { // busy waiting
-            System.out.println("leaderElections increment succeeded");
-            //System.out.println("Leader elections preValue: " + value.preValue());
+            System.out.println("Leader elections counter increment succeeded. Value is now: " + value.postValue());
             if (value.preValue() == 0) {
                 return true;
             } else {
