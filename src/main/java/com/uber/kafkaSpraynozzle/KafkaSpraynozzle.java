@@ -22,11 +22,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.net.UnknownHostException;
-import java.io.File;
-import java.util.Scanner;
-import java.io.FileNotFoundException;
-import java.net.InetAddress;
 import java.io.IOException;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -52,10 +47,6 @@ class KafkaSpraynozzle {
         String zk = spraynozzleArgs.getZk();
         Boolean spraynozzleHA = spraynozzleArgs.getIsHighlyAvailable();
         boolean buffering = spraynozzleArgs.getBuffering();
-        String hostName = getHostNameFromInetAddress();
-        if (isStringEmpty(hostName)) {
-            hostName = getHostNameFromFile();
-        }
 
         String topic = spraynozzleArgs.getTopic();
         final String url = spraynozzleArgs.getUrl();
@@ -79,14 +70,14 @@ class KafkaSpraynozzle {
             System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
             //use same zk as kafka
             //curator and kafka zk path NEED to be different since kafka path is cleared when there is no buffering
-            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + hostName + "_" + topics[0] + cleanedUrl;
-            String zkLeaderElectionFolderPath = "/consumers/kafka_spraynozzle_leader_elections_" + hostName + "_" + topics[0] + cleanedUrl;
+            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
+            String zkLeaderElectionFolderPath = "/consumers/kafka_spraynozzle_leader_elections_" + topics[0] + cleanedUrl;
             //identify each spraynozzle instace with a UUID to allow spraynozzles in the same ring (master-slave config) to coexist in the same host
             String spraynozzleName = "spraynozzle-" + UUID.randomUUID();
             SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, zkLeaderLatchFolderPath, zkLeaderElectionFolderPath, spraynozzleName);
             curatorClient.start();
             curatorClient.blockUntilisLeader();
-            System.out.println("This spraynozzle (spraynozzle-" +  spraynozzleName + ") is now the leader. Follow the leader!");
+            System.out.println("This spraynozzle (" +  spraynozzleName + ") is now the leader. Follow the leader!");
             if (curatorClient.isFirstLeader()) {
                 //set buffering flag OFF
                 System.out.println("Spraynozzle is first elected leader for this deployment.");
@@ -182,28 +173,6 @@ class KafkaSpraynozzle {
             return true;
         } else {
             return false;
-        }
-    }
-
-    private static String getHostNameFromInetAddress() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return null;
-        }
-    }
-
-    private static String getHostNameFromFile() {
-        try {
-            File file = new File("/etc/hostname");
-            Scanner input = new Scanner(file);
-            if (input.hasNext()) {
-                return input.nextLine();
-            } else {
-                return null;
-            }
-        } catch (FileNotFoundException e) {
-            return null;
         }
     }
 
