@@ -38,7 +38,8 @@ public class KafkaPoster implements Runnable {
         while(true) {
             ByteArrayEntity jsonEntity = this.queue.poll();
             if(jsonEntity != null) {
-                if (messageFilter.filter(jsonEntity)) {
+                jsonEntity = messageFilter.filter(jsonEntity);
+                if (jsonEntity != null) {
                     try {
                         this.logQueue.add("posting");
                         HttpPost post = new HttpPost(this.url);
