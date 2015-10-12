@@ -14,9 +14,8 @@ public class SpraynozzleLeaderLatch {
     private String counterPath;
     private String id;
     private LeaderLatch leaderLatch;
-    private DistributedAtomicInteger leaderElections;
 
-    public SpraynozzleLeaderLatch(String connString, String latchPath, String counterPath, String id) {
+    public SpraynozzleLeaderLatch(String connString, String latchPath, String id) {
         zkClient = CuratorFrameworkFactory.newClient(connString, new ExponentialBackoffRetry(1000, 3));
         this.id = id;
         this.latchPath = latchPath;
@@ -27,21 +26,7 @@ public class SpraynozzleLeaderLatch {
         zkClient.start();
         zkClient.blockUntilConnected();
         leaderLatch = new LeaderLatch(zkClient, latchPath, id);
-        leaderElections = new DistributedAtomicInteger(zkClient, counterPath, new ExponentialBackoffRetry(1000, 3));
         leaderLatch.start();
-    }
-
-    public Boolean isFirstLeader() throws Exception {
-        AtomicValue<Integer> value = leaderElections.increment();
-        while (value.succeeded()) { // busy waiting
-            System.out.println("Leader elections counter increment succeeded. Value is now: " + value.postValue());
-            if (value.preValue() == 0) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        return false; // never runs
     }
 
     public void blockUntilisLeader() throws Exception {
