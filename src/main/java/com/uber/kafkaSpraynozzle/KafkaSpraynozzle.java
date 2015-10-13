@@ -66,8 +66,9 @@ class KafkaSpraynozzle {
             System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
         }
 
+        // IMPORTANT: It is highly recommended to turn on spraynozzleHA and buffering sumultaneously
+        // so messages are not dropped in the leader election process
         if (spraynozzleHA) {
-            buffering = true;
             String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
             System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
             //use same zk as kafka
