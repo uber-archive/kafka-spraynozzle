@@ -44,6 +44,7 @@ class KafkaSpraynozzle {
         }
 
         String zk = spraynozzleArgs.getZk();
+        ZkClient zkClient = new ZkClient(zk, 10000);
         Boolean spraynozzleHA = spraynozzleArgs.getIsHighlyAvailable();
         boolean buffering = spraynozzleArgs.getBuffering();
 
@@ -65,41 +66,23 @@ class KafkaSpraynozzle {
             System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
         }
 
+        // IMPORTANT: It is highly recommended to turn on spraynozzleHA and buffering sumultaneously
+        // so messages are not dropped in the leader election process
         if (spraynozzleHA) {
+            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
             System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
             //use same zk as kafka
-            //curator and kafka zk path NEED to be different since kafka path is cleared when there is no buffering
-            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
-            String zkLeaderElectionFolderPath = "/consumers/kafka_spraynozzle_leader_elections_" + topics[0] + cleanedUrl;
             //identify each spraynozzle instace with a UUID to allow spraynozzles in the same ring (master-slave config) to coexist in the same host
             String spraynozzleName = "spraynozzle-" + UUID.randomUUID();
-            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, zkLeaderLatchFolderPath, zkLeaderElectionFolderPath, spraynozzleName);
+            SpraynozzleLeaderLatch curatorClient = new SpraynozzleLeaderLatch(zk, zkLeaderLatchFolderPath, spraynozzleName);
             curatorClient.start();
             curatorClient.blockUntilisLeader();
             System.out.println("This spraynozzle (" +  spraynozzleName + ") is now the leader. Follow the leader!");
-            if (curatorClient.isFirstLeader()) {
-                //set buffering flag OFF
-                System.out.println("Spraynozzle is first elected leader for this deployment. Clear out zookeeper records so the spraynozzle drops messages between runs");
-                buffering = false;
-            } else {
-                System.out.println("Spraynozzle is elected leader, but not the first. Keep zookeeper records so the spraynozzle resumes from last offset between runs.");
-                //set buffering flag ON
-                buffering = true;
-            }
         }
 
         if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
-            ZkClient zkClient = new ZkClient(zk, 10000);
-            ZkUtils.deletePathRecursive(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl);
-            while (ZkUtils.pathExists(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl)) {
-                try {
-                    Thread.sleep(250);
-                } catch (java.lang.InterruptedException e) {
-                    System.out.println("Sleep Exception!?");
-                    e.printStackTrace();
-                }
-            }
+            clearZkPath(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl);
         }
 
         // Kafka setup stuff
@@ -146,6 +129,18 @@ class KafkaSpraynozzle {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
             executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
+        }
+    }
+
+    private static void clearZkPath(ZkClient zkClient, String zkPath){
+        ZkUtils.deletePathRecursive(zkClient, zkPath);
+        while (ZkUtils.pathExists(zkClient, zkPath)) {
+            try {
+                Thread.sleep(250);
+            } catch (java.lang.InterruptedException e) {
+                System.out.println("Sleep Exception!?");
+                e.printStackTrace();
+            }
         }
     }
 
