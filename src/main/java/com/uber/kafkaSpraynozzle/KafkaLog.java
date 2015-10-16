@@ -2,6 +2,7 @@ package com.uber.kafkaSpraynozzle;
 
 import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 
+import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 // Stringly-typed for now. Anti-pattern but will make it grown up when this app demands more rigor on this front.
@@ -19,7 +20,8 @@ public class KafkaLog implements Runnable {
                 "\"post_url\": \"%s\", " +
                 "\"post_count\": %d, " +
                 "\"post_success\": %d, " +
-                "\"post_failure\": %d" +
+                "\"post_failure\": %d, " +
+                "\"ts\": %d" +
             "}" +
         "}";
 
@@ -67,7 +69,8 @@ public class KafkaLog implements Runnable {
                     filteredOut++;
                 }
             }
-            System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.url, posting, postSuccess, postFailure));
+            Date now = new Date();
+            System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.url, posting, postSuccess, postFailure, now.getTime()));
             statsReporter.count("enqueued", enqueued);
             statsReporter.count("paused", clogged);
             statsReporter.count("filtered", filteredOut);
