@@ -3,11 +3,12 @@ package com.uber.kafkaSpraynozzle;
 import com.lexicalscope.jewel.cli.CommandLineInterface;
 import com.lexicalscope.jewel.cli.Option;
 import com.lexicalscope.jewel.cli.Unparsed;
+import java.util.List;
 
 @CommandLineInterface(application="kafka-spraynozzle")
 public interface KafkaArgs {
     @Unparsed(name="topic", description="The kafka topic to stream from") String getTopic();
-    @Option(shortName="u", description="The URL to post kafka messages to (in the form http(s)://server.address(:port)/url)") String getUrl();
+    @Option(shortName="u", description="The URL(s) to post kafka messages to (in the form http(s)://server.address(:port)/url)") List<String> getUrls();
     @Option(shortName="z", description="The Zookeeper instance to read from (in the form server.address:port)") String getZk();
     @Option(shortName="n", description="The number of HTTP posting threads to use") int getThreadCount();
     @Option(shortName="b", description="Use Kafka protocol to buffer messages while spraynozzle is down (default: false)") boolean getBuffering();

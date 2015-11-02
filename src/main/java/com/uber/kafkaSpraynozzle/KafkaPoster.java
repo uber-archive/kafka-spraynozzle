@@ -1,6 +1,7 @@
 package com.uber.kafkaSpraynozzle;
 
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -13,19 +14,20 @@ import org.apache.http.util.EntityUtils;
 public class KafkaPoster implements Runnable {
     ConcurrentLinkedQueue<ByteArrayEntity> queue;
     PoolingHttpClientConnectionManager cm;
-    String url;
+    List<String> urls;
+    static int currentUrl = 0;
     ConcurrentLinkedQueue<String> logQueue;
     KafkaFilter messageFilter;
 
     public KafkaPoster(
         ConcurrentLinkedQueue<ByteArrayEntity> queue,
         PoolingHttpClientConnectionManager cm,
-        String url,
+        List<String> urls,
         ConcurrentLinkedQueue<String> logQueue,
         KafkaFilter messageFilter) {
         this.queue = queue;
         this.cm = cm;
-        this.url = url;
+        this.urls = urls;
         this.logQueue = logQueue;
         this.messageFilter = messageFilter;
     }
@@ -33,24 +35,25 @@ public class KafkaPoster implements Runnable {
     public void run() {
         long threadId = Thread.currentThread().getId();
         System.out.println("Starting poster thread " + threadId);
-        CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(this.cm).build();
+        CloseableHttpClient client = HttpClientBuilder.create().setConnectionManager(cm).build();
         long lastReconnect = new Date().getTime();
         while(true) {
-            ByteArrayEntity jsonEntity = this.queue.poll();
+            ByteArrayEntity jsonEntity = queue.poll();
             if(jsonEntity != null) {
                 jsonEntity = messageFilter.filter(jsonEntity);
                 if (jsonEntity != null) {
                     try {
-                        this.logQueue.add("posting");
-                        HttpPost post = new HttpPost(this.url);
+                        logQueue.add("posting");
+                        HttpPost post = new HttpPost(urls.get(currentUrl));
+                        currentUrl = (currentUrl + 1) % urls.size();
                         post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
                         post.setEntity(jsonEntity);
                         CloseableHttpResponse response = client.execute(post);
                         int statusCode = response.getStatusLine().getStatusCode();
                         if (statusCode >= 200 && statusCode < 300) {
-                            this.logQueue.add("postSuccess");
+                            logQueue.add("postSuccess");
                         } else {
-                            this.logQueue.add("postFailure");
+                            logQueue.add("postFailure");
                         }
                         long currentTime = new Date().getTime();
                         if(currentTime - lastReconnect > 10000) {
@@ -64,7 +67,7 @@ public class KafkaPoster implements Runnable {
                         e.printStackTrace();
                     }
                 } else {
-                    this.logQueue.add("filteredOut");
+                    logQueue.add("filteredOut");
                 }
             } else {
                 try {
