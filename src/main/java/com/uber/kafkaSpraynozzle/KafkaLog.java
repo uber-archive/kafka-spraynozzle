@@ -3,6 +3,7 @@ package com.uber.kafkaSpraynozzle;
 import com.uber.kafkaSpraynozzle.stats.StatsReporter;
 
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 // Stringly-typed for now. Anti-pattern but will make it grown up when this app demands more rigor on this front.
@@ -17,7 +18,7 @@ public class KafkaLog implements Runnable {
                 "\"enqueued_count\": %d, " +
                 "\"filtered_count\": %d, " +
                 "\"pause_count\": %d, " +
-                "\"post_url\": \"%s\", " +
+                "\"post_urls\": \"%s\", " +
                 "\"post_count\": %d, " +
                 "\"post_success\": %d, " +
                 "\"post_failure\": %d, " +
@@ -28,13 +29,13 @@ public class KafkaLog implements Runnable {
     ConcurrentLinkedQueue<String> logQueue;
     StatsReporter statsReporter;
     String topic;
-    String url;
+    List<String> urls;
 
-    public KafkaLog(ConcurrentLinkedQueue<String> logQueue, StatsReporter statsReporter, String topic, String url) {
+    public KafkaLog(ConcurrentLinkedQueue<String> logQueue, StatsReporter statsReporter, String topic, List<String> urls) {
         this.logQueue = logQueue;
         this.statsReporter = statsReporter;
         this.topic = topic;
-        this.url = url;
+        this.urls = urls;
     }
 
     public void run() {
@@ -70,7 +71,7 @@ public class KafkaLog implements Runnable {
                 }
             }
             Date now = new Date();
-            System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.url, posting, postSuccess, postFailure, now.getTime()));
+            System.out.println(String.format(LOG_FORMAT, this.topic, enqueued, filteredOut, clogged, this.urls, posting, postSuccess, postFailure, now.getTime()));
             statsReporter.count("enqueued", enqueued);
             statsReporter.count("paused", clogged);
             statsReporter.count("filtered", filteredOut);

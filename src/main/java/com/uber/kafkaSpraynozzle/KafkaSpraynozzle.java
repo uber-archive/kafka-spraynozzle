@@ -49,8 +49,8 @@ class KafkaSpraynozzle {
         boolean buffering = spraynozzleArgs.getBuffering();
 
         String topic = spraynozzleArgs.getTopic();
-        final String url = spraynozzleArgs.getUrl();
-        String cleanedUrl = url.replaceAll("[/\\:]", "_");
+        final List<String> urls = spraynozzleArgs.getUrls();
+        final String cleanedUrl = url.get(0).replaceAll("[/\\:]", "_");
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
         final String filterClass = spraynozzleArgs.getFilterClass();
@@ -61,9 +61,9 @@ class KafkaSpraynozzle {
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
         String[] topics = topic.split(",");
         if (topics.length == 1) {
-            System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + url);
+            System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + urls);
         } else {
-            System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + url);
+            System.out.println("Listening to " + topic + " topics from " + zk + " and redirecting to " + urls);
         }
 
         // IMPORTANT: It is highly recommended to turn on spraynozzleHA and buffering sumultaneously
@@ -82,7 +82,7 @@ class KafkaSpraynozzle {
 
         if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
-            clearZkPath(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl);
+            clearZkPath(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrls);
         }
 
         // Kafka setup stuff
@@ -117,7 +117,7 @@ class KafkaSpraynozzle {
 
         // Build the worker threads
         StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
-        executor.submit(new KafkaLog(logQueue, statsReporter, topic, url)); // TODO: Distinguish between the topics in the kafka logger
+        executor.submit(new KafkaLog(logQueue, statsReporter, topic, urls)); // TODO: Distinguish between the topics in the kafka logger
 
         for (final List<KafkaStream<Message>> streamList : streams) {
             for (final KafkaStream<Message> stream : streamList) {
@@ -128,7 +128,7 @@ class KafkaSpraynozzle {
         for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
-            executor.submit(new KafkaPoster(queue, cm, url, logQueue, messageFilter));
+            executor.submit(new KafkaPoster(queue, cm, urls, logQueue, messageFilter));
         }
     }
 
