@@ -50,10 +50,7 @@ class KafkaSpraynozzle {
 
         String topic = spraynozzleArgs.getTopic();
         final List<String> urls = spraynozzleArgs.getUrls();
-        String cleanedUrls = "";
-        for (String url : urls) {
-            cleanedUrls += url.replaceAll("[/\\:]", "_");
-        }
+        final String cleanedUrl = url.get(0).replaceAll("[/\\:]", "_");
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
         final String filterClass = spraynozzleArgs.getFilterClass();
@@ -72,7 +69,7 @@ class KafkaSpraynozzle {
         // IMPORTANT: It is highly recommended to turn on spraynozzleHA and buffering sumultaneously
         // so messages are not dropped in the leader election process
         if (spraynozzleHA) {
-            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrls;
+            String zkLeaderLatchFolderPath = "/consumers/kafka_spraynozzle_leader_latch_" + topics[0] + cleanedUrl;
             System.out.println("Performing leader election through zookeeper and picking leader that will proceed.");
             //use same zk as kafka
             //identify each spraynozzle instace with a UUID to allow spraynozzles in the same ring (master-slave config) to coexist in the same host
@@ -92,7 +89,7 @@ class KafkaSpraynozzle {
         Properties kafkaProps = new Properties();
         kafkaProps.put("zk.connect", zk);
         kafkaProps.put("zk.connectiontimeout.ms", "10000");
-        kafkaProps.put("groupid", "kafka_spraynozzle_" + topics[0] + cleanedUrls);
+        kafkaProps.put("groupid", "kafka_spraynozzle_" + topics[0] + cleanedUrl);
         kafkaProps.put("autooffset.reset", "largest");
         kafkaProps.put("fetch.size", String.valueOf(2*1024*1024));
         ConsumerConfig consumerConfig = new ConsumerConfig(kafkaProps);
