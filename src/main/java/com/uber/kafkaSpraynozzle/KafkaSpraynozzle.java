@@ -50,7 +50,7 @@ class KafkaSpraynozzle {
 
         String topic = spraynozzleArgs.getTopic();
         final List<String> urls = spraynozzleArgs.getUrls();
-        final String cleanedUrl = url.get(0).replaceAll("[/\\:]", "_");
+        final String cleanedUrl = urls.get(0).replaceAll("[/\\:]", "_");
         final int threadCount = spraynozzleArgs.getThreadCount();
         final int partitionCount = spraynozzleArgs.getPartitionCount();
         final String filterClass = spraynozzleArgs.getFilterClass();
@@ -82,7 +82,7 @@ class KafkaSpraynozzle {
 
         if (!buffering) {
             // Clear out zookeeper records so the spraynozzle drops messages between runs
-            clearZkPath(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrls);
+            clearZkPath(zkClient, "/consumers/kafka_spraynozzle_" + topics[0] + cleanedUrl);
         }
 
         // Kafka setup stuff
