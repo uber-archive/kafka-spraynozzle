@@ -109,7 +109,7 @@ class KafkaSpraynozzle {
         // Http Connection Pooling stuff
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
         cm.setMaxTotal(threadCount);
-        cm.setDefaultMaxPerRoute(threadCount / topics.size());
+        cm.setDefaultMaxPerRoute(threadCount / topics.length);
 
         // Message-passing queues within the spraynozzle
         final ConcurrentLinkedQueue<ByteArrayEntity> queue = new ConcurrentLinkedQueue<ByteArrayEntity>();
