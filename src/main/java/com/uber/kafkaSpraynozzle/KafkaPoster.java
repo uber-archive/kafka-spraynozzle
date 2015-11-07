@@ -65,6 +65,7 @@ public class KafkaPoster implements Runnable {
                     } catch (java.io.IOException e) {
                         System.out.println("IO issue");
                         e.printStackTrace();
+                        logQueue.add("postFailure");
                     }
                 } else {
                     logQueue.add("filteredOut");
