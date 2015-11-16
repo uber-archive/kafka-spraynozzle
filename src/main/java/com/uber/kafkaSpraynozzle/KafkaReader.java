@@ -2,6 +2,10 @@ package com.uber.kafkaSpraynozzle;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import kafka.consumer.KafkaStream;
 import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
@@ -9,14 +13,22 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 
 public class KafkaReader implements Runnable {
-    ConcurrentLinkedQueue<ByteArrayEntity> queue;
-    KafkaStream<Message> stream;
-    ConcurrentLinkedQueue<String> logQueue;
+    private MetricRegistry metricRegistry;
+    private ConcurrentLinkedQueue<ByteArrayEntity> queue;
+    private KafkaStream<Message> stream;
 
-    public KafkaReader(ConcurrentLinkedQueue<ByteArrayEntity> queue, KafkaStream<Message> stream, ConcurrentLinkedQueue<String> logQueue) {
+    private Counter enqueuedCount;
+    private Counter pausedCount;
+    private Timer pausedTime;
+
+    public KafkaReader(MetricRegistry metricRegistry, ConcurrentLinkedQueue<ByteArrayEntity> queue, KafkaStream<Message> stream) {
+        this.metricRegistry = metricRegistry;
         this.queue = queue;
         this.stream = stream;
-        this.logQueue = logQueue;
+
+        this.enqueuedCount = metricRegistry.counter("enqueued_count");
+        this.pausedCount = metricRegistry.counter("pause_count");
+        this.pausedTime = metricRegistry.timer("pause_time");
     }
 
     public void run() {
@@ -31,21 +43,23 @@ public class KafkaReader implements Runnable {
             ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
             jsonEntity.setContentEncoding("UTF-8");
             queue.add(jsonEntity);
-            this.logQueue.add("enqueued");
+            enqueuedCount.inc();
             pushCount++;
             if(pushCount == 100) {
                 pushCount = 0;
                 int queueSize = queue.size();
                 if(queueSize > 500) {
-                    this.logQueue.add("clogged");
-                    while(queueSize > 100) {
-                        try {
-                            Thread.sleep(5);
-                        } catch (java.lang.InterruptedException e) {
-                            System.out.println("Sleep issue!?");
-                            e.printStackTrace();
+                    pausedCount.inc();
+                    try (Timer.Context ctx = pausedTime.time()) {
+                        while (queueSize > 100) {
+                            try {
+                                Thread.sleep(5);
+                            } catch (java.lang.InterruptedException e) {
+                                System.out.println("Sleep issue!?");
+                                e.printStackTrace();
+                            }
+                            queueSize = queue.size();
                         }
-                        queueSize = queue.size();
                     }
                 }
             }
