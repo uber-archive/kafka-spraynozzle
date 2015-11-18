@@ -17,18 +17,21 @@ public class KafkaReader implements Runnable {
     private ConcurrentLinkedQueue<ByteArrayEntity> queue;
     private KafkaStream<Message> stream;
 
-    private Counter enqueuedCount;
-    private Counter pausedCount;
-    private Timer pausedTime;
+    private Counter enqueuedCount = new Counter();
+    private Counter pausedCount = new Counter();
+    private Timer pausedTime = new Timer();
 
-    public KafkaReader(MetricRegistry metricRegistry, ConcurrentLinkedQueue<ByteArrayEntity> queue, KafkaStream<Message> stream) {
+    public KafkaReader(MetricRegistry metricRegistry,
+                       ConcurrentLinkedQueue<ByteArrayEntity> queue,
+                       KafkaStream<Message> stream) {
         this.metricRegistry = metricRegistry;
         this.queue = queue;
         this.stream = stream;
-
-        this.enqueuedCount = metricRegistry.counter("enqueued_count");
-        this.pausedCount = metricRegistry.counter("pause_count");
-        this.pausedTime = metricRegistry.timer("pause_time");
+        if (metricRegistry != null) {
+            this.enqueuedCount = metricRegistry.counter("enqueued_count");
+            this.pausedCount = metricRegistry.counter("pause_count");
+            this.pausedTime = metricRegistry.timer("pause_time");
+        }
     }
 
     public void run() {
@@ -39,30 +42,35 @@ public class KafkaReader implements Runnable {
         for(MessageAndMetadata<Message> msgAndMetadata: this.stream) {
             ByteBuffer message = msgAndMetadata.message().payload();
             Integer messageLen = msgAndMetadata.message().payloadSize();
-            Integer messageOffset = message.arrayOffset();
-            ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
-            jsonEntity.setContentEncoding("UTF-8");
-            queue.add(jsonEntity);
-            enqueuedCount.inc();
-            pushCount++;
-            if(pushCount == 100) {
-                pushCount = 0;
-                int queueSize = queue.size();
-                if(queueSize > 500) {
-                    pausedCount.inc();
-                    try (Timer.Context ctx = pausedTime.time()) {
-                        while (queueSize > 100) {
-                            try {
-                                Thread.sleep(5);
-                            } catch (java.lang.InterruptedException e) {
-                                System.out.println("Sleep issue!?");
-                                e.printStackTrace();
-                            }
-                            queueSize = queue.size();
+            pushCount = enqueueData(pushCount, messageLen, message);
+        }
+    }
+
+    public int enqueueData(int pushCount, Integer messageLen, ByteBuffer message) {
+        Integer messageOffset = message.arrayOffset();
+        ByteArrayEntity jsonEntity = new ByteArrayEntity(message.array(), messageOffset, messageLen, ContentType.APPLICATION_JSON);
+        jsonEntity.setContentEncoding("UTF-8");
+        queue.add(jsonEntity);
+        enqueuedCount.inc();
+        pushCount++;
+        if (pushCount == 100) {
+            pushCount = 0;
+            int queueSize = queue.size();
+            if (queueSize > 500) {
+                pausedCount.inc();
+                try (Timer.Context ctx = pausedTime.time()) {
+                    while (queueSize > 100) {
+                        try {
+                            Thread.sleep(5);
+                        } catch (InterruptedException e) {
+                            System.out.println("Sleep issue!?");
+                            e.printStackTrace();
                         }
+                        queueSize = queue.size();
                     }
                 }
             }
         }
+        return pushCount;
     }
 }
