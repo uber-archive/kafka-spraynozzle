@@ -192,19 +192,20 @@ public class KafkaPoster implements Runnable {
             }
             CloseableHttpResponse response = client.execute(post);
             int statusCode = response.getStatusLine().getStatusCode();
+            long timeAfterPost = System.nanoTime();
             if (statusCode >= 200 && statusCode < 300) {
                 postSuccess.inc();
             } else {
                 postFailure.inc();
             }
-            long timeAfterPost = System.nanoTime();
+
 
             //// managing the "least response time" decay.
             //// Every time halflife time has passed, we reduce the "bad record" of response time by half
             /// so eventually those bad servers with slow response time will get another chance of being tried.
             /// and we will not keep pounding the same fast server since all record of response time decays.
             responseTimestamp[pickedUrlIdx] = timeAfterPost;
-            responseTime[pickedUrlIdx] = (int) (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
+            responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
             for (int i = 0; i < responseTimestamp.length; ++i) {
                 if ((timeAfterPost - responseTimestamp[i]) > responseDecayingHalflife * NANOS_PER_SECOND) {
                     responseTimestamp[i] = timeAfterPost;
