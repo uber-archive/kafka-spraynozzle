@@ -50,7 +50,7 @@ public class KafkaPoster implements Runnable {
         this(metricRegistry,
                 queue, cm, urls, messageFilter,
                 socketTimeout, connectionTimeout,
-                20, false, false );
+                1, false, false );
     }
     public KafkaPoster(
         MetricRegistry metricRegistry,
@@ -83,6 +83,9 @@ public class KafkaPoster implements Runnable {
             this.postSuccess = metricRegistry.counter("post_success");
             this.postFailure = metricRegistry.counter("post_failure");
             this.filteredCount = metricRegistry.counter("filtered_count");
+        }
+        if (batchSize <= 0){
+            batchSize = 1;
         }
         this.batchSize = batchSize;
         this.roundRobin = roundRobinPost;
