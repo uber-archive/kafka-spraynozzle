@@ -23,4 +23,5 @@ public interface KafkaArgs {
     @Option(longName="connectionTimeout", defaultToNull=true, description="The connection timeout in milliseconds for posting (default: none)") Integer getConnectionTimeout();
     @Option(longName="socketTimeout", shortName="t", defaultToNull=true, description="The socket timeout in milliseconds for posting (default: none)") Integer getSocketTimeout();
     @Option(longName="help", shortName="h", helpRequest=true, description="Display this Help message") boolean getHelp();
+    @Option(shortName="i", defaultValue = "20", description="Number of messages to pack as a batch before POST to endpoint") int getBatchSize();
 }

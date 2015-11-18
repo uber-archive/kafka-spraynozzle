@@ -16,7 +16,9 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 public class BenchmarkSpraynozzle {
+
 
     public static void main(String[] args) throws Exception {
         BenchmarkArgs benchmarkArgs;
@@ -69,17 +72,28 @@ public class BenchmarkSpraynozzle {
             executor.submit(driver);
         }
 
-
+        final long[] serverCalledCount = new long[benchmarkArgs.getHttpEndpointCount()];
+        long startingTime = new Date().getTime();
+        List<WireMockServer> servers = new ArrayList<WireMockServer>(benchmarkArgs.getHttpEndpointCount());
         if (benchmarkArgs.getEnableRealHttp() == 1){
             // Http Connection Pooling stuff
             List<String> urls = new ArrayList<String>(benchmarkArgs.getHttpEndpointCount());
             for (int i = 0; i < benchmarkArgs.getHttpEndpointCount(); ++i){
                 urls.add("http://localhost:" + (18982 + i) + "/endpoint");
             }
-            List<WireMockServer> servers = new ArrayList<WireMockServer>(benchmarkArgs.getHttpEndpointCount());
+
             for (int i = 0; i < benchmarkArgs.getHttpEndpointCount(); ++i){
                 servers.add(new WireMockServer(18982 + i));
+                final int serverIdx = i;
                 servers.get(i).addStubMapping(new StubMapping(new RequestPattern(POST, "/endpoint"), ResponseDefinition.ok()));
+                servers.get(i).addMockServiceRequestListener(
+                        new RequestListener() {
+                            @Override
+                            public void requestReceived(Request request, Response response) {
+                                serverCalledCount[serverIdx]++;
+                            }
+                        }
+                );
                 servers.get(i).start();
                 if (i == 0){ /// introduce imbalanced server response.
                     servers.get(0).addRequestProcessingDelay(200);
@@ -104,8 +118,20 @@ public class BenchmarkSpraynozzle {
         long startNanoTime = System.nanoTime();
         while (System.nanoTime() - startNanoTime < (benchmarkArgs.getTestTime() + 20)* NANO_PER_SECOND ){
             Thread.sleep(1000);
+            if (benchmarkArgs.getEnableRealHttp() == 1) {
+                long currentTime = new Date().getTime();
+                if (currentTime - startingTime > 10 * 1000){
+                    for (int i = 0; i < serverCalledCount.length; ++i){
+                        System.out.println(String.format("Server %d, called %d times", i, serverCalledCount[i]));
+                    }
+                    startingTime = currentTime;
+                }
+            }
         }
         abortFlag.set(true);
         executor.shutdown();
+        for (WireMockServer server: servers){
+            server.shutdown();
+        }
     }
 }

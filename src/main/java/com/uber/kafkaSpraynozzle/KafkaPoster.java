@@ -24,7 +24,7 @@ public class KafkaPoster implements Runnable {
     ConcurrentLinkedQueue<ByteArrayEntity> queue;
     PoolingHttpClientConnectionManager cm;
     List<String> urls;
-    static int currentUrl = 0;
+    int currentUrl = 0;
     static final int responseDecayingHalflife = 5;
     KafkaFilter messageFilter;
     private RequestConfig requestConfig;
@@ -89,7 +89,7 @@ public class KafkaPoster implements Runnable {
         this.debuggingOutput = debuggingOutput;
     }
 
-    private int leastResponseIdx(int[] responseTime) {
+    private int leastResponseIdx(long[] responseTime) {
         int leastIdx = 0;
         for (int i = 1; i < responseTime.length; ++i){
             if (responseTime[i] < responseTime[leastIdx]){
@@ -110,14 +110,14 @@ public class KafkaPoster implements Runnable {
     private CloseableHttpClient client = null;
     private long threadId = 0L;
     private long lastReconnect = 0L;
-    private int[] responseTime = null;
+    private long[] responseTime = null;
     private long[] responseTimestamp = null;
     public void run() {
         threadId = Thread.currentThread().getId();
         System.out.println("Starting poster thread " + threadId);
         client = HttpClientBuilder.create().setConnectionManager(cm).build();
         lastReconnect = new Date().getTime();
-        responseTime = new int[urls.size()];
+        responseTime = new long[urls.size()];
         responseTimestamp = new long[urls.size()];
 
         List<ByteArrayEntity> batch = new ArrayList<ByteArrayEntity>(batchSize + 1);
@@ -160,6 +160,8 @@ public class KafkaPoster implements Runnable {
     }
 
     private boolean postBatchEvents(List<ByteArrayEntity> batch) {
+        final long NANOS_PER_SECOND = 1000L * 1000L * 1000L;
+        final long NANOS_PER_MILLI_SECOND = 1000L * 1000L;
         int pickedUrlIdx;
         try (Timer.Context ctx = postTime.time()) {
             long timeBeforePost = new Date().getTime();
@@ -173,15 +175,20 @@ public class KafkaPoster implements Runnable {
             if (roundRobin) {
                 currentUrl = (currentUrl + 1) % urls.size();
             }
-            post.setHeader("User-Agent", "KafkaSpraynozzle-0.0.1");
-            try {
-                ByteArrayEntity packedEntities = ListSerializer.toByteArrayEntity(batch);
-                post.setEntity(packedEntities);
+            post.setHeader("User-Agent", "KafkaSpraynozzle-0.2.0");
+            if (batchSize == 1 && batch.size() == 1){
+                post.setEntity(batch.get(0));
                 batch.clear();
-            }catch(InvalidMessageSizeException ex){
-                postFailure.inc();
-                batch.clear();
-                return false;
+            }else {
+                try {
+                    ByteArrayEntity packedEntities = ListSerializer.toByteArrayEntity(batch);
+                    post.setEntity(packedEntities);
+                    batch.clear();
+                } catch (InvalidMessageSizeException ex) {
+                    postFailure.inc();
+                    batch.clear();
+                    return false;
+                }
             }
             CloseableHttpResponse response = client.execute(post);
             int statusCode = response.getStatusLine().getStatusCode();
@@ -190,16 +197,16 @@ public class KafkaPoster implements Runnable {
             } else {
                 postFailure.inc();
             }
-            long timeAfterPost = new Date().getTime();
+            long timeAfterPost = System.nanoTime();
 
             //// managing the "least response time" decay.
             //// Every time halflife time has passed, we reduce the "bad record" of response time by half
             /// so eventually those bad servers with slow response time will get another chance of being tried.
             /// and we will not keep pounding the same fast server since all record of response time decays.
             responseTimestamp[pickedUrlIdx] = timeAfterPost;
-            responseTime[pickedUrlIdx] = (int) (timeAfterPost - timeBeforePost) + 5;// penalize by 5 ms
+            responseTime[pickedUrlIdx] = (int) (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
             for (int i = 0; i < responseTimestamp.length; ++i) {
-                if ((timeAfterPost - responseTimestamp[i]) > responseDecayingHalflife * 1000) {
+                if ((timeAfterPost - responseTimestamp[i]) > responseDecayingHalflife * NANOS_PER_SECOND) {
                     responseTimestamp[i] = timeAfterPost;
                     responseTime[i] = responseTime[i] / 2;
                 }

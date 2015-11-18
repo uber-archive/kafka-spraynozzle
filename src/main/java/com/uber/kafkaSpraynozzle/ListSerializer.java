@@ -13,35 +13,12 @@ import java.util.List;
  */
 public class ListSerializer {
 
-    private static void writeIntToByteStream(int val, ByteArrayOutputStream stream){
-        byte[] buf = {0,0,0,0};
-        buf[3] = (byte) (val       );
-        buf[2] = (byte) (val >>>  8);
-        buf[1] = (byte) (val >>> 16);
-        buf[0] = (byte) (val >>> 24);
-        stream.write(buf, 0, 4);
-    }
-
-    private static int readIntFromByteStream(ByteArrayInputStream stream) throws IOException{
-        byte[] buf = {0,0,0,0};
-        int actualRead = stream.read(buf, 0, 4);
-        if (actualRead != 4){
-            throw new IOException("Deserialized data corrupted");
-        }
-        return getInt(buf);
-    }
-
-    private static int getInt(byte[] b) {
-        return ((b[3] & 0xFF)      ) +
-                ((b[2] & 0xFF) <<  8) +
-                ((b[1] & 0xFF) << 16) +
-                ((b[0]       ) << 24);
-    }
-
     /**
      * Serialize the List\<ByteArrayEntitity\> object into an byte array so it can be posted in one call
      * The encoding rule is plain simple:
      *  {totalElements}{length}{byte block of length}{length}{byte block of length}...
+     * For example, a List of 3 ByteArrayEntities, with 10,20,30 bytes at length will deserialized into below:
+     *  0x00000003, 0x00000001,[10 byte],0x00000002,[20 byte],0x00000003,[30 byte]
      * @param entities the List objects to serialize
      * @return the one single byte array, encoded.
      * @throws InvalidMessageSizeException If the array is too large to fit into one huge memory
@@ -57,10 +34,11 @@ public class ListSerializer {
             throw new InvalidMessageSizeException("The batched messages are too large");
         }
         ByteArrayOutputStream serialized = new ByteArrayOutputStream();
-        writeIntToByteStream(entities.size(), serialized);
-        for (int i = 0; i < entities.size(); ++i){
-            writeIntToByteStream((int) entities.get(i).getContentLength(), serialized);
-            entities.get(i).writeTo(serialized);
+        DataOutputStream output = new DataOutputStream(serialized);
+        output.writeInt(entities.size());
+        for (ByteArrayEntity entity : entities){
+            output.writeInt((int) entity.getContentLength());
+            entity.writeTo(output);
         }
         return new ByteArrayEntity(serialized.toByteArray());
     }
@@ -73,14 +51,15 @@ public class ListSerializer {
      * @throws IOException if somehow stream read/write fails, or data corrupted
      */
     public static List<ByteArrayEntity> toListOfByteArrayEntity(byte[] serialized) throws InvalidMessageSizeException, IOException {
-        ByteArrayInputStream input = new ByteArrayInputStream(serialized);
+        ByteArrayInputStream byteStream = new ByteArrayInputStream(serialized);
+        DataInputStream input = new DataInputStream(byteStream);
         final long largest_block = 1024L*1024L*128L;
 
-        int arraySize = readIntFromByteStream(input);
+        int arraySize = input.readInt();
         List<ByteArrayEntity> retVal = new ArrayList<ByteArrayEntity>(arraySize);
         for (int i = 0; i < arraySize; ++i){
-            int objectSize = readIntFromByteStream(input);
-            if (objectSize >= largest_block){ // >=128MB is dangerous
+            int objectSize = input.readInt();
+            if (objectSize >= largest_block || objectSize < 0){ // >=128MB is dangerous
                 throw new InvalidMessageSizeException("The batched messages are too large");
             }
             byte[] objectBytes = new byte[objectSize];
