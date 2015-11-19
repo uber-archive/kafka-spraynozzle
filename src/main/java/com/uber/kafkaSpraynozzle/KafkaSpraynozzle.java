@@ -74,6 +74,8 @@ class KafkaSpraynozzle {
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
         final Integer soTimeout = spraynozzleArgs.getSocketTimeout();
         final Integer connectTimeout = spraynozzleArgs.getConnectionTimeout();
+        final int batchPostingSize = spraynozzleArgs.getBatchSize();
+        final boolean forceRoundRobin = !spraynozzleArgs.getEnableBalancing();
         String[] topics = topic.split(",");
         if (topics.length == 1) {
             System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + urls);
@@ -156,7 +158,8 @@ class KafkaSpraynozzle {
         for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
-            executor.submit(new KafkaPoster(metricRegistry, queue, cm, urls, messageFilter, soTimeout, connectTimeout));
+            executor.submit(new KafkaPoster(metricRegistry, queue, cm, urls, messageFilter, soTimeout, connectTimeout,
+                    batchPostingSize, forceRoundRobin, false));
         }
     }
 

@@ -19,7 +19,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>3.8.1</version>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -92,7 +92,12 @@
             <artifactId>metrics-jvm</artifactId>
             <version>${io.dropwizard.metrics.version}</version>
         </dependency>
-</dependencies>
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>1.57</version>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
