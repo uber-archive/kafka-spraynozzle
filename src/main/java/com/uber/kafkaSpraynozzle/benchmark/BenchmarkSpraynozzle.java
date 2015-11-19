@@ -1,5 +1,6 @@
 package com.uber.kafkaSpraynozzle.benchmark;
 
+import com.codahale.metrics.MetricRegistry;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.http.*;
 
@@ -67,7 +68,7 @@ public class BenchmarkSpraynozzle {
         final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<String>();
         AtomicBoolean abortFlag = new AtomicBoolean(false);
         for (int i = 0; i < benchmarkArgs.getReaderThreads(); ++i){
-            KafkaReader reader = new KafkaReader(null, queue, null);
+            KafkaReader reader = new KafkaReader(new MetricRegistry(), queue, null);
             KafkaReaderDriver driver = new KafkaReaderDriver(reader, benchmarkArgs.getTestTime() * benchmarkArgs.getMessagePerPerSecond(),
                     benchmarkArgs.getMessageSize(), benchmarkArgs.getMessagePerPerSecond(), abortFlag);
             executor.submit(driver);
@@ -105,7 +106,7 @@ public class BenchmarkSpraynozzle {
             cm.setDefaultMaxPerRoute(benchmarkArgs.getPostThreads());
 
             for (int i = 0; i < benchmarkArgs.getPostThreads(); ++i) {
-                KafkaPoster poster = new KafkaPoster(null, queue, cm, urls, new KafkaNoopFilter(),
+                KafkaPoster poster = new KafkaPoster(new MetricRegistry(), queue, cm, urls, new KafkaNoopFilter(),
                         2000, 1000, 20, benchmarkArgs.getForceRoundRobin() == 1, true);
                 executor.submit(poster);
             }
