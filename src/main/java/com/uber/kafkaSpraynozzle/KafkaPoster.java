@@ -5,10 +5,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.codahale.metrics.Counter;
-import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.sun.istack.internal.Nullable;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -40,8 +38,8 @@ public class KafkaPoster implements Runnable {
         PoolingHttpClientConnectionManager cm,
         List<String> urls,
         KafkaFilter messageFilter,
-        @Nullable Integer socketTimeout,
-        @Nullable Integer connectionTimeout
+        Integer socketTimeout,
+        Integer connectionTimeout
     ) {
         this.metricRegistry = metricRegistry;
         this.queue = queue;

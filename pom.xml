@@ -9,6 +9,12 @@
     <properties>
         <io.dropwizard.metrics.version>3.1.1</io.dropwizard.metrics.version>
     </properties>
+    <repositories>
+        <repository>
+            <id>readytalk-maven</id>
+            <url>https://dl.bintray.com/readytalk/maven/</url>
+        </repository>
+    </repositories>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
