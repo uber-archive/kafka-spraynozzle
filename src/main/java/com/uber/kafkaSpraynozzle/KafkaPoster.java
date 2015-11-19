@@ -167,7 +167,7 @@ public class KafkaPoster implements Runnable {
         final long NANOS_PER_MILLI_SECOND = 1000L * 1000L;
         int pickedUrlIdx;
         try (Timer.Context ctx = postTime.time()) {
-            long timeBeforePost = new Date().getTime();
+            long timeBeforePost = System.nanoTime();
             postCount.inc();
             if (roundRobin) {
                 pickedUrlIdx = currentUrl;
