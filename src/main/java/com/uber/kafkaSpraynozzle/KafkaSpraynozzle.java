@@ -75,7 +75,7 @@ class KafkaSpraynozzle {
         final Integer soTimeout = spraynozzleArgs.getSocketTimeout();
         final Integer connectTimeout = spraynozzleArgs.getConnectionTimeout();
         final int batchPostingSize = spraynozzleArgs.getBatchSize();
-        final boolean forceRoundRobin = spraynozzleArgs.getEnableBalancing() == null;
+        final boolean forceRoundRobin = !spraynozzleArgs.getEnableBalancing();
         String[] topics = topic.split(",");
         if (topics.length == 1) {
             System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + urls);
