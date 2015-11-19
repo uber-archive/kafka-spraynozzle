@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -130,6 +131,7 @@ public class BenchmarkSpraynozzle {
         }
         abortFlag.set(true);
         executor.shutdown();
+        executor.awaitTermination(300, TimeUnit.SECONDS);
         for (WireMockServer server: servers){
             server.shutdown();
         }
