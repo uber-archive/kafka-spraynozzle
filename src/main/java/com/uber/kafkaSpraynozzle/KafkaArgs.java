@@ -20,5 +20,7 @@ public interface KafkaArgs {
     @Option(shortName="s", defaultToNull=true, description="The name of a class to use for stats reporting (default: none)") String getStatsClass();
     @Option(shortName="w", defaultToNull=true, description="The classpath to use for finding the above-mentioned stats class (default: none)") String getStatsClasspath();
     @Option(shortName="d", defaultToNull=true, description="The arguments for the above-mentioned stats class (default: none)") String getStatsClassArgs();
-    @Option(shortName="h", helpRequest=true, description="Display this Help message") boolean getHelp();
+    @Option(longName="connectionTimeout", defaultToNull=true, description="The connection timeout in milliseconds for posting (default: none)") Integer getConnectionTimeout();
+    @Option(longName="socketTimeout", shortName="t", defaultToNull=true, description="The socket timeout in milliseconds for posting (default: none)") Integer getSocketTimeout();
+    @Option(longName="help", shortName="h", helpRequest=true, description="Display this Help message") boolean getHelp();
 }

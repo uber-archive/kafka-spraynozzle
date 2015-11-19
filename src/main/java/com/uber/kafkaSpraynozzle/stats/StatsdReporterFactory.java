@@ -1,31 +1,23 @@
 package com.uber.kafkaSpraynozzle.stats;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ScheduledReporter;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.timgroup.statsd.NonBlockingStatsDClient;
-import com.timgroup.statsd.StatsDClient;
+import com.readytalk.metrics.StatsDReporter;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Statsd StatsReporter implementation
- *
- * To initialize this class you need to provide it with the following json string:
-   {
-       "host": <hostname>,
-       "port": <port>,
-       "statsPrefix": <prefix for all stats> (optional)
-   }
- */
-public class StatsdReporter implements StatsReporter {
-    private final StatsDClient statsd;
+@JsonTypeName("statsd")
+public class StatsdReporterFactory implements StatsReporterFactory {
     private final String statsPrefix;
     private final String statsdHost;
     private final Integer statsdPort;
 
-    public StatsdReporter(String jsonConfig) throws IOException {
+    public StatsdReporterFactory(String jsonConfig) throws IOException {
         // convert jsonConfig into Map
         Map<String, Object> configMap;
         try {
@@ -38,21 +30,18 @@ public class StatsdReporter implements StatsReporter {
         this.statsdHost = (String)configMap.get("host");
         this.statsdPort = (Integer)configMap.get("port");
         System.out.println("Connecting to statsd at: " + this.statsdHost + ":" + this.statsdPort);
-        this.statsd = new NonBlockingStatsDClient(this.statsPrefix, this.statsdHost, this.statsdPort);
     }
 
     @Override
-    public void count(String stat, long delta){
-        try {
-            statsd.count(stat, delta);
-        } catch(Exception e){
-            System.out.println("There was an error reporting stat \'" + stat + "\' to StatsD: " + e.getMessage());
-        }
+    public ScheduledReporter build(MetricRegistry registry) {
+        return StatsDReporter.forRegistry(registry)
+                .prefixedWith(statsPrefix)
+                .build(statsdHost, statsdPort);
     }
 
     @Override
     public String toString() {
-        return "StatsdReporter{" +
+        return "StatsdReporterFactory{" +
                 "stats prefix=" + this.statsPrefix +
                 ", statsd host=" + this.statsdHost +
                 ", statsd port=" + this.statsdPort +

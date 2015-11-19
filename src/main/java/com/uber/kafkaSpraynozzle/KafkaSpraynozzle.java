@@ -1,15 +1,24 @@
 package com.uber.kafkaSpraynozzle;
 
 // Forgive me for any non-idiomatic ways this code behaves. I'm not a Java guy but the other clients suck.
+import com.codahale.metrics.JvmAttributeGaugeSet;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ScheduledReporter;
+import com.codahale.metrics.jvm.BufferPoolMetricSet;
+import com.codahale.metrics.jvm.ClassLoadingGaugeSet;
+import com.codahale.metrics.jvm.FileDescriptorRatioGauge;
+import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
+import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.lexicalscope.jewel.cli.ArgumentValidationException;
 import com.lexicalscope.jewel.cli.CliFactory;
-import com.uber.kafkaSpraynozzle.stats.NoopStatsReporter;
-import com.uber.kafkaSpraynozzle.stats.StatsReporter;
+import com.uber.kafkaSpraynozzle.stats.NoopReporterFactory;
 import java.io.File;
 import java.lang.ClassLoader;
 import java.lang.ClassNotFoundException;
 import java.lang.IllegalAccessException;
 import java.lang.InstantiationException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -22,6 +31,8 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import com.uber.kafkaSpraynozzle.stats.StatsReporterFactory;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -29,9 +40,11 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
 import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.http.config.ConnectionConfig;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 class KafkaSpraynozzle {
     public static void main(String[] args) throws Exception {
@@ -59,6 +72,8 @@ class KafkaSpraynozzle {
         final String statsClass = spraynozzleArgs.getStatsClass();
         final String statsClasspath = spraynozzleArgs.getStatsClasspath();
         final String statsClassArgs = spraynozzleArgs.getStatsClassArgs();
+        final Integer soTimeout = spraynozzleArgs.getSocketTimeout();
+        final Integer connectTimeout = spraynozzleArgs.getConnectionTimeout();
         String[] topics = topic.split(",");
         if (topics.length == 1) {
             System.out.println("Listening to " + topic + " topic from " + zk + " and redirecting to " + urls);
@@ -113,22 +128,35 @@ class KafkaSpraynozzle {
 
         // Message-passing queues within the spraynozzle
         final ConcurrentLinkedQueue<ByteArrayEntity> queue = new ConcurrentLinkedQueue<ByteArrayEntity>();
-        final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<String>();
 
         // Build the worker threads
-        StatsReporter statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
-        executor.submit(new KafkaLog(logQueue, statsReporter, topic, urls)); // TODO: Distinguish between the topics in the kafka logger
+        MetricRegistry metricRegistry = new MetricRegistry();
+        StatsReporterFactory statsReporter = getStatsReporter(statsClasspath, statsClass, statsClassArgs);
+        if (statsReporter != null) {
+            ScheduledReporter reporter = statsReporter.build(metricRegistry);
+            if (reporter != null) {
+                System.out.println("Starting stats reporter");
+                metricRegistry.register("jvm.attribute", new JvmAttributeGaugeSet());
+                metricRegistry.register("jvm.buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
+                metricRegistry.register("jvm.classloader", new ClassLoadingGaugeSet());
+                metricRegistry.register("jvm.filedescriptor", new FileDescriptorRatioGauge());
+                metricRegistry.register("jvm.gc", new GarbageCollectorMetricSet());
+                metricRegistry.register("jvm.memory", new MemoryUsageGaugeSet());
+                metricRegistry.register("jvm.threads", new ThreadStatesGaugeSet());
+                reporter.start(10, TimeUnit.SECONDS);
+            }
+        }
 
         for (final List<KafkaStream<Message>> streamList : streams) {
             for (final KafkaStream<Message> stream : streamList) {
-                executor.submit(new KafkaReader(queue, stream, logQueue));
+                executor.submit(new KafkaReader(metricRegistry, queue, stream));
             }
         }
 
         for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
-            executor.submit(new KafkaPoster(queue, cm, urls, logQueue, messageFilter));
+            executor.submit(new KafkaPoster(metricRegistry, queue, cm, urls, messageFilter, soTimeout, connectTimeout));
         }
     }
 
@@ -153,10 +181,10 @@ class KafkaSpraynozzle {
         return messageFilter;
     }
 
-    private static StatsReporter getStatsReporter(String classpath, String className, String classArgs){
-        StatsReporter statsReporter = (StatsReporter)getClass(classpath, className, classArgs);
+    private static StatsReporterFactory getStatsReporter(String classpath, String className, String classArgs){
+        StatsReporterFactory statsReporter = (StatsReporterFactory)getClass(classpath, className, classArgs);
         if (statsReporter == null) {
-            statsReporter = new NoopStatsReporter();
+            statsReporter = new NoopReporterFactory();
         }
         System.out.println("Using stats reporter: " + statsReporter);
         return statsReporter;
