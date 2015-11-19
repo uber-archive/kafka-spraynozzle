@@ -158,7 +158,8 @@ class KafkaSpraynozzle {
         for (int i = 0; i < threadCount; i++) {
             // create new filter for every thread so the filters member variables are not shared
             KafkaFilter messageFilter = getKafkaFilter(filterClass, filterClasspath, filterClassArgs);
-            executor.submit(new KafkaPoster(metricRegistry, queue, cm, urls, messageFilter, soTimeout, connectTimeout, 20, forceRoundRobin, false));
+            executor.submit(new KafkaPoster(metricRegistry, queue, cm, urls, messageFilter, soTimeout, connectTimeout,
+                    batchPostingSize, forceRoundRobin, false));
         }
     }
 
