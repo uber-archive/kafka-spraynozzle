@@ -165,7 +165,7 @@ public class KafkaPoster implements Runnable {
     private boolean postBatchEvents(List<ByteArrayEntity> batch) {
         final long NANOS_PER_SECOND = 1000L * 1000L * 1000L;
         final long NANOS_PER_MILLI_SECOND = 1000L * 1000L;
-        int pickedUrlIdx;
+        int pickedUrlIdx = currentUrl;
         try (Timer.Context ctx = postTime.time()) {
             long timeBeforePost = System.nanoTime();
             postCount.inc();
@@ -179,6 +179,14 @@ public class KafkaPoster implements Runnable {
                 currentUrl = (currentUrl + 1) % urls.size();
             }
             post.setHeader("User-Agent", "KafkaSpraynozzle-0.2.0");
+
+            // we set the timestamp and time cost as if it has failed
+            // So in case it fails we will avoid it in next try;
+            //  Later if we succeeded we will update the value to correct latest value.
+            responseTimestamp[pickedUrlIdx] = System.nanoTime();
+            responseTime[pickedUrlIdx] = 5 * NANOS_PER_SECOND;
+
+
             if (batchSize == 1 && batch.size() == 1){
                 post.setEntity(batch.get(0));
                 batch.clear();
@@ -198,17 +206,19 @@ public class KafkaPoster implements Runnable {
             long timeAfterPost = System.nanoTime();
             if (statusCode >= 200 && statusCode < 300) {
                 postSuccess.inc();
+                //// managing the "least response time" decay.
+                //// Every time halflife time has passed, we reduce the "bad record" of response time by half
+                /// so eventually those bad servers with slow response time will get another chance of being tried.
+                /// and we will not keep pounding the same fast server since all record of response time decays.
+                responseTimestamp[pickedUrlIdx] = timeAfterPost;
+                responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
             } else {
                 postFailure.inc();
+                responseTimestamp[pickedUrlIdx] = timeAfterPost;
+                responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 5 * NANOS_PER_SECOND;// failed posts gets 5 second penalty
             }
 
 
-            //// managing the "least response time" decay.
-            //// Every time halflife time has passed, we reduce the "bad record" of response time by half
-            /// so eventually those bad servers with slow response time will get another chance of being tried.
-            /// and we will not keep pounding the same fast server since all record of response time decays.
-            responseTimestamp[pickedUrlIdx] = timeAfterPost;
-            responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
             for (int i = 0; i < responseTimestamp.length; ++i) {
                 if ((timeAfterPost - responseTimestamp[i]) > responseDecayingHalflife * NANOS_PER_SECOND) {
                     responseTimestamp[i] = timeAfterPost;
@@ -226,6 +236,9 @@ public class KafkaPoster implements Runnable {
             System.out.println("IO issue");
             e.printStackTrace();
             postFailure.inc();
+            responseTimestamp[pickedUrlIdx] = System.nanoTime();
+            responseTime[pickedUrlIdx] = 5 * NANOS_PER_SECOND;
+
             return false;
         }
         return true;
