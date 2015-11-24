@@ -165,7 +165,7 @@ public class KafkaPoster implements Runnable {
     private boolean postBatchEvents(List<ByteArrayEntity> batch) {
         final long NANOS_PER_SECOND = 1000L * 1000L * 1000L;
         final long NANOS_PER_MILLI_SECOND = 1000L * 1000L;
-        int pickedUrlIdx;
+        int pickedUrlIdx = currentUrl;
         try (Timer.Context ctx = postTime.time()) {
             long timeBeforePost = System.nanoTime();
             postCount.inc();
@@ -236,6 +236,9 @@ public class KafkaPoster implements Runnable {
             System.out.println("IO issue");
             e.printStackTrace();
             postFailure.inc();
+            responseTimestamp[pickedUrlIdx] = System.nanoTime();
+            responseTime[pickedUrlIdx] = 5 * NANOS_PER_SECOND;
+
             return false;
         }
         return true;
