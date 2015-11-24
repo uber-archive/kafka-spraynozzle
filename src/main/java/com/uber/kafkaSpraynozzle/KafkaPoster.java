@@ -214,12 +214,8 @@ public class KafkaPoster implements Runnable {
                 responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 2 * NANOS_PER_MILLI_SECOND;// penalize by 2 ms so the same won't be used again and again.
             } else {
                 postFailure.inc();
-                //// managing the "least response time" decay.
-                //// Every time halflife time has passed, we reduce the "bad record" of response time by half
-                /// so eventually those bad servers with slow response time will get another chance of being tried.
-                /// and we will not keep pounding the same fast server since all record of response time decays.
                 responseTimestamp[pickedUrlIdx] = timeAfterPost;
-                responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 5 * NANOS_PER_SECOND;// penalize by 2 ms so the same won't be used again and again.
+                responseTime[pickedUrlIdx] = (timeAfterPost - timeBeforePost) + 5 * NANOS_PER_SECOND;// failed posts gets 5 second penalty
             }
 
 
