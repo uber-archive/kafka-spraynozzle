@@ -27,10 +27,13 @@ Most non-Java Kafka clients suck, especially the Kafka 0.7 clients, so they can'
 Also make sure you have `maven` installed. It's used to build the project. Optionally have any version of Node.js installed if you want to run the trivial test server that was used in debugging the spraynozzle.
 
 Finally, you can do:
-    git clone git@github.com:uber/kafka-spraynozzle
-    cd kafka-spraynozzle
-    mvn clean package
-    ./kafka-spraynozzle.sh -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
+
+```sh
+git clone git@github.com:uber/kafka-spraynozzle.git
+cd kafka-spraynozzle
+mvn clean package
+./kafka-spraynozzle.sh -n num_http_threads -u http://remote.server:port/url -z zookeeper.server:port kafka.topic
+```
 
 ## How It Works
 
