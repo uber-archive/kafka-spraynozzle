@@ -163,6 +163,10 @@ public class KafkaPoster implements Runnable {
     }
 
     private boolean postBatchEvents(List<ByteArrayEntity> batch) {
+        if (batch.isEmpty()) {
+            return true;
+        }
+
         final long NANOS_PER_SECOND = 1000L * 1000L * 1000L;
         final long NANOS_PER_MILLI_SECOND = 1000L * 1000L;
         int pickedUrlIdx = currentUrl;
