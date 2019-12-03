@@ -1,5 +1,7 @@
 # kafka-spraynozzle
 
+(This project is deprecated and not maintained.)
+
 A nozzle to spray a kafka topic at an HTTP endpoint.
 
 ## Why?
